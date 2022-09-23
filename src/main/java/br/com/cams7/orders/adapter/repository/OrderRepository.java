@@ -5,6 +5,7 @@ import static br.com.cams7.orders.adapter.repository.utils.DatabaseCollectionUti
 
 import br.com.cams7.orders.adapter.repository.model.OrderModel;
 import br.com.cams7.orders.core.domain.OrderEntity;
+import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,12 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Repository
 @RequiredArgsConstructor
-public class OrderRepository implements GetOrdersByCountryRepositoryPort {
+public class OrderRepository
+    implements GetOrdersByCountryRepositoryPort, GetOrderByIdRepositoryPort {
 
   private final DateUtils dateUtils;
   private final ReactiveMongoOperations mongoOperations;
@@ -25,9 +28,17 @@ public class OrderRepository implements GetOrdersByCountryRepositoryPort {
 
   @Override
   public Flux<OrderEntity> getOrders(String country) {
-    String collectionName = getCollectionByCountry(country, COLLECTION_NAME);
     Query query = new Query(Criteria.where("address.country").is(country));
-    return mongoOperations.find(query, OrderModel.class, collectionName).map(this::getOrder);
+    return mongoOperations
+        .find(query, OrderModel.class, getCollectionName(country))
+        .map(this::getOrder);
+  }
+
+  @Override
+  public Mono<OrderEntity> getOrder(String country, String orderId) {
+    return mongoOperations
+        .findById(orderId, OrderModel.class, getCollectionName(country))
+        .map(this::getOrder);
   }
 
   private OrderEntity getOrder(OrderModel model) {
@@ -39,5 +50,9 @@ public class OrderRepository implements GetOrdersByCountryRepositoryPort {
             .withTotalAmount(model.getTotal())
             .withRegistrationDate(dateUtils.getZonedDateTime(country, model.getRegistrationDate()));
     return entity;
+  }
+
+  private String getCollectionName(String country) {
+    return getCollectionByCountry(country, COLLECTION_NAME);
   }
 }

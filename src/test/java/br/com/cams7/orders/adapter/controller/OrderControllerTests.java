@@ -4,6 +4,7 @@ import static br.com.cams7.orders.adapter.repository.model.OrderModel.COLLECTION
 import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_MODEL;
 import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_RESPONSE;
 import static br.com.cams7.orders.template.OrderEntityTemplate.CUSTOMER_ADDRESS_COUNTRY;
+import static br.com.cams7.orders.template.OrderEntityTemplate.ORDER_ID;
 import static br.com.six2six.fixturefactory.Fixture.from;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static reactor.test.StepVerifier.create;
@@ -82,6 +83,60 @@ public class OrderControllerTests extends BaseIntegrationTests {
         .isOk()
         .expectBodyList(OrderResponse.class)
         .hasSize(0);
+  }
+
+  @Test
+  @DisplayName("Should return order when accessing 'get order' API and pass a valid order id")
+  void shouldReturnOrderWhenAccessingGetOrderAPIAndPassAValidOrderId() {
+    OrderModel model = from(OrderModel.class).gimme(ORDER_MODEL);
+    OrderResponse response = from(OrderResponse.class).gimme(ORDER_RESPONSE);
+
+    createOrderCollection(CUSTOMER_ADDRESS_COUNTRY, model);
+
+    testClient
+        .get()
+        .uri("/orders/{orderId}", model.getId())
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(OrderResponse.class)
+        .isEqualTo(response);
+  }
+
+  @Test
+  @DisplayName("Should return empty when accessing 'get order' API and doesn't have any order")
+  void shouldReturnEmptyWhenAccessingGetOrderAPIAndDoesNotHaveOrder() {
+    testClient
+        .get()
+        .uri("/orders/{orderId}", ORDER_ID)
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should return empty accessing 'get order' API and when pass a invalid country")
+  void shouldReturnEmptyWhenAccessingGetOrderAPIAndPassAInvalidCountry() {
+    OrderModel model = from(OrderModel.class).gimme(ORDER_MODEL);
+
+    createOrderCollection(CUSTOMER_ADDRESS_COUNTRY, model);
+
+    testClient
+        .get()
+        .uri("/orders/{orderId}", model.getId())
+        .header("country", INVALID_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .isEmpty();
   }
 
   private void createOrderCollection(String country, OrderModel order) {
