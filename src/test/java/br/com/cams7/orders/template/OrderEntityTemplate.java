@@ -42,7 +42,7 @@ public final class OrderEntityTemplate {
   public static final String CART_ITEM3_PRODUCT_ID = "2c22ea64-39f1-474b-92d2-b92684dedaa0";
   public static final int CART_ITEM3_QUANTITY = 1;
   public static final float CART_ITEM3_UNIT_PRICE = 27.0f;
-  public static final String REGISTRATION_DATE = "2022-09-22T17:46:53.0";
+  public static final String REGISTRATION_DATE = "2022-09-22T17:46:53";
   public static final float TOTAL_AMOUNT = 161.55f;
 
   public static void loadTemplates() {
