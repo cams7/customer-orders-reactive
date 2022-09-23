@@ -7,7 +7,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import br.com.cams7.orders.adapter.controller.response.OrderResponse;
 import br.com.cams7.orders.core.domain.OrderEntity;
-import br.com.cams7.orders.core.port.in.GetOrdersUseCasePort;
+import br.com.cams7.orders.core.port.in.GetOrdersByCountryUseCasePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -30,9 +30,9 @@ import reactor.core.publisher.Flux;
 // @Log4j2
 @RestController
 @RequestMapping(path = "/orders", produces = APPLICATION_JSON_VALUE)
-public class GetOrdersController {
+public class OrderController {
 
-  private final GetOrdersUseCasePort getOrdersUseCase;
+  private final GetOrdersByCountryUseCasePort getOrdersByCountryUseCase;
   private final ModelMapper modelMapper;
 
   @Operation(description = "Get orders")
@@ -66,7 +66,7 @@ public class GetOrdersController {
   Flux<OrderResponse> getOrders(
       @RequestHeader("country") String country,
       @RequestHeader(value = "requestTraceId") String requestTraceId) {
-    return getOrdersUseCase.execute(country).map(this::getOrder);
+    return getOrdersByCountryUseCase.execute(country).map(this::getOrder);
   }
 
   private OrderResponse getOrder(OrderEntity entity) {

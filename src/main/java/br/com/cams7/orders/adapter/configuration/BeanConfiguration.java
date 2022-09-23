@@ -1,7 +1,7 @@
 package br.com.cams7.orders.adapter.configuration;
 
-import br.com.cams7.orders.core.GetOrdersUseCase;
-import br.com.cams7.orders.core.port.in.GetOrdersUseCasePort;
+import br.com.cams7.orders.core.GetOrdersByCountryUseCase;
+import br.com.cams7.orders.core.port.in.GetOrdersByCountryUseCasePort;
 import br.com.cams7.orders.core.port.out.GetOrdersRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import org.modelmapper.ModelMapper;
@@ -25,7 +25,7 @@ public class BeanConfiguration {
   }
 
   @Bean
-  GetOrdersUseCasePort getOrdersUseCase(GetOrdersRepositoryPort getOrdersRepository) {
-    return new GetOrdersUseCase(getOrdersRepository);
+  GetOrdersByCountryUseCasePort getOrdersUseCase(GetOrdersRepositoryPort getOrdersRepository) {
+    return new GetOrdersByCountryUseCase(getOrdersRepository);
   }
 }
