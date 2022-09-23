@@ -5,7 +5,7 @@ import static br.com.cams7.orders.adapter.repository.utils.DatabaseCollectionUti
 
 import br.com.cams7.orders.adapter.repository.model.OrderModel;
 import br.com.cams7.orders.core.domain.OrderEntity;
-import br.com.cams7.orders.core.port.out.GetOrdersRepositoryPort;
+import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -17,14 +17,14 @@ import reactor.core.publisher.Flux;
 
 @Repository
 @RequiredArgsConstructor
-public class OrderRepository implements GetOrdersRepositoryPort {
+public class OrderRepository implements GetOrdersByCountryRepositoryPort {
 
   private final DateUtils dateUtils;
   private final ReactiveMongoOperations mongoOperations;
   private final ModelMapper modelMapper;
 
   @Override
-  public Flux<OrderEntity> findAll(String country) {
+  public Flux<OrderEntity> getOrders(String country) {
     String collectionName = getCollectionByCountry(country, COLLECTION_NAME);
     Query query = new Query(Criteria.where("address.country").is(country));
     return mongoOperations.find(query, OrderModel.class, collectionName).map(this::getOrder);
