@@ -79,7 +79,7 @@ function getStatusName(statusCode) {
 }
 
 function getTimestamp() {
-  return new Date().toISOString().replace(/Z$/, "");	
+  return new Date().toISOString().replace(/Z$/, "+00:00");	
 }
 
 function getJsonData (value) {
