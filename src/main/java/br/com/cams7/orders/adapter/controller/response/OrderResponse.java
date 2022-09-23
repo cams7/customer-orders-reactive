@@ -2,9 +2,13 @@ package br.com.cams7.orders.adapter.controller.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderResponse {
   @Schema(example = "57a98d98e4b00679b4a830af", description = "Order id")
   private String orderId;

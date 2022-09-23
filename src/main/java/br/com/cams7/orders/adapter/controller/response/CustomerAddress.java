@@ -1,9 +1,13 @@
 package br.com.cams7.orders.adapter.controller.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CustomerAddress {
   @Schema(example = "a679084a-03e7-49c7-9516-5a7d6757e1c2", description = "Customer address id")
   private String addressId;
