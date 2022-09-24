@@ -1,9 +1,12 @@
 package br.com.cams7.orders.adapter.configuration;
 
+import br.com.cams7.orders.core.DeleteOrderByIdUseCase;
 import br.com.cams7.orders.core.GetOrderByIdUseCase;
 import br.com.cams7.orders.core.GetOrdersByCountryUseCase;
+import br.com.cams7.orders.core.port.in.DeleteOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrdersByCountryUseCasePort;
+import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
@@ -36,5 +39,11 @@ public class BeanConfiguration {
   @Bean
   GetOrderByIdUseCasePort getOrderByIdUseCase(GetOrderByIdRepositoryPort getOrderByIdRepository) {
     return new GetOrderByIdUseCase(getOrderByIdRepository);
+  }
+
+  @Bean
+  DeleteOrderByIdUseCasePort deleteOrderByIdUseCase(
+      DeleteOrderByIdRepositoryPort deleteOrderByIdRepository) {
+    return new DeleteOrderByIdUseCase(deleteOrderByIdRepository);
   }
 }

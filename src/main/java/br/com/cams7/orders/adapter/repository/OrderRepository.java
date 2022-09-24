@@ -5,6 +5,7 @@ import static br.com.cams7.orders.adapter.repository.utils.DatabaseCollectionUti
 
 import br.com.cams7.orders.adapter.repository.model.OrderModel;
 import br.com.cams7.orders.core.domain.OrderEntity;
+import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
@@ -20,7 +21,9 @@ import reactor.core.publisher.Mono;
 @Repository
 @RequiredArgsConstructor
 public class OrderRepository
-    implements GetOrdersByCountryRepositoryPort, GetOrderByIdRepositoryPort {
+    implements GetOrdersByCountryRepositoryPort,
+        GetOrderByIdRepositoryPort,
+        DeleteOrderByIdRepositoryPort {
 
   private final DateUtils dateUtils;
   private final ReactiveMongoOperations mongoOperations;
@@ -28,7 +31,7 @@ public class OrderRepository
 
   @Override
   public Flux<OrderEntity> getOrders(String country) {
-    Query query = new Query(Criteria.where("address.country").is(country));
+    var query = new Query(Criteria.where("address.country").is(country));
     return mongoOperations
         .find(query, OrderModel.class, getCollectionName(country))
         .map(this::getOrder);
@@ -39,6 +42,14 @@ public class OrderRepository
     return mongoOperations
         .findById(orderId, OrderModel.class, getCollectionName(country))
         .map(this::getOrder);
+  }
+
+  @Override
+  public Mono<Long> delete(String country, String orderId) {
+    var query = new Query(Criteria.where("id").is(orderId));
+    return mongoOperations
+        .remove(query, OrderModel.class, getCollectionName(country))
+        .map(data -> data.getDeletedCount());
   }
 
   private OrderEntity getOrder(OrderModel model) {
@@ -52,7 +63,7 @@ public class OrderRepository
     return entity;
   }
 
-  private String getCollectionName(String country) {
+  private static String getCollectionName(String country) {
     return getCollectionByCountry(country, COLLECTION_NAME);
   }
 }

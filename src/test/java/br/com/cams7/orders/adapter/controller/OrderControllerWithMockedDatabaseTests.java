@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
 
   @MockBean private GetOrdersByCountryRepositoryPort getOrdersRepository;
   @MockBean private GetOrderByIdRepositoryPort getOrderByIdRepository;
+  @MockBean private DeleteOrderByIdRepositoryPort deleteOrderByIdRepository;
 
   @Test
   @DisplayName(
@@ -84,5 +86,36 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
     then(getOrderByIdRepository)
         .should(times(1))
         .getOrder(eq(CUSTOMER_ADDRESS_COUNTRY), eq(ORDER_ID));
+  }
+
+  @Test
+  @DisplayName(
+      "Should return InternalServerError status when accessing 'delete order' API and some error happen trying to delete order in database")
+  void
+      shouldReturnInternalServerErrorStatusWhenAccessingDeleteOrderAPIAndSomeErrorHappenTryingToDeleteOrderInDatabase() {
+    given(deleteOrderByIdRepository.delete(anyString(), anyString()))
+        .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
+
+    testClient
+        .delete()
+        .uri("/orders/{orderId}", ORDER_ID)
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .exchange()
+        .expectStatus()
+        .is5xxServerError()
+        .expectBody()
+        .jsonPath(TIMESTAMP_ATTRIBUTE)
+        .isNotEmpty()
+        .jsonPath(PATH_ATTRIBUTE)
+        .isNotEmpty()
+        .jsonPath(ERROR_ATTRIBUTE)
+        .isEqualTo(INTERNAL_SERVER_ERROR)
+        .jsonPath(REQUESTID_ATTRIBUTE)
+        .isNotEmpty();
+
+    then(deleteOrderByIdRepository)
+        .should(times(1))
+        .delete(eq(CUSTOMER_ADDRESS_COUNTRY), eq(ORDER_ID));
   }
 }
