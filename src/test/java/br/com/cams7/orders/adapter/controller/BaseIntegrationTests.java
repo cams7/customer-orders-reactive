@@ -4,7 +4,14 @@ import static br.com.cams7.orders.adapter.repository.utils.DatabaseCollectionUti
 import static reactor.test.StepVerifier.create;
 
 import br.com.cams7.orders.BaseTests;
+import br.com.cams7.orders.core.port.out.AddShippingOrderServicePort;
+import br.com.cams7.orders.core.port.out.GetCartItemsServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerAddressServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerCardServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerServicePort;
+import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.mongodb.core.ReactiveMongoOperations;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -27,6 +34,13 @@ public abstract class BaseIntegrationTests extends BaseTests {
   @Autowired protected WebTestClient testClient;
 
   @Autowired protected ReactiveMongoOperations mongoOperations;
+
+  @MockBean protected GetCustomerServicePort getCustomerService;
+  @MockBean protected GetCustomerAddressServicePort getCustomerAddressService;
+  @MockBean protected GetCustomerCardServicePort getCustomerCardService;
+  @MockBean protected GetCartItemsServicePort getCartItemsService;
+  @MockBean protected VerifyPaymentServicePort verifyPaymentService;
+  @MockBean protected AddShippingOrderServicePort addShippingOrderService;
 
   protected void dropCollection(String country, String collectionName) {
     create(mongoOperations.dropCollection(getCollectionName(country, collectionName)))

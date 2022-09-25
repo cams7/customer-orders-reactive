@@ -5,6 +5,7 @@ import static br.com.cams7.orders.adapter.repository.utils.DatabaseCollectionUti
 
 import br.com.cams7.orders.adapter.repository.model.OrderModel;
 import br.com.cams7.orders.core.domain.OrderEntity;
+import br.com.cams7.orders.core.port.out.CreateOrderRepositoryPort;
 import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
@@ -23,7 +24,8 @@ import reactor.core.publisher.Mono;
 public class OrderRepository
     implements GetOrdersByCountryRepositoryPort,
         GetOrderByIdRepositoryPort,
-        DeleteOrderByIdRepositoryPort {
+        DeleteOrderByIdRepositoryPort,
+        CreateOrderRepositoryPort {
 
   private final DateUtils dateUtils;
   private final ReactiveMongoOperations mongoOperations;
@@ -52,6 +54,12 @@ public class OrderRepository
         .map(data -> data.getDeletedCount());
   }
 
+  @Override
+  public Mono<OrderEntity> create(OrderEntity order) {
+    var country = order.getAddress().getCountry();
+    return mongoOperations.insert(getOrder(order), getCollectionName(country)).map(this::getOrder);
+  }
+
   private OrderEntity getOrder(OrderModel model) {
     var country = model.getAddress().getCountry();
     var entity =
@@ -61,6 +69,14 @@ public class OrderRepository
             .withTotalAmount(model.getTotal())
             .withRegistrationDate(dateUtils.getZonedDateTime(country, model.getRegistrationDate()));
     return entity;
+  }
+
+  private OrderModel getOrder(OrderEntity entity) {
+    var model = modelMapper.map(entity, OrderModel.class);
+    model.setId(entity.getOrderId());
+    model.setTotal(entity.getTotalAmount());
+    model.setRegistrationDate(entity.getRegistrationDate().toLocalDateTime());
+    return model;
   }
 
   private static String getCollectionName(String country) {

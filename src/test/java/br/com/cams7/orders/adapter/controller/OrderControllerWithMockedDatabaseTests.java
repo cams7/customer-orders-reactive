@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.times;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
+import br.com.cams7.orders.core.port.out.CreateOrderRepositoryPort;
 import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
@@ -27,6 +28,7 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
   @MockBean private GetOrdersByCountryRepositoryPort getOrdersRepository;
   @MockBean private GetOrderByIdRepositoryPort getOrderByIdRepository;
   @MockBean private DeleteOrderByIdRepositoryPort deleteOrderByIdRepository;
+  @MockBean private CreateOrderRepositoryPort createOrderRepository;
 
   @Test
   @DisplayName(

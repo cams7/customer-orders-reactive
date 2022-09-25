@@ -1,14 +1,23 @@
 package br.com.cams7.orders.adapter.configuration;
 
+import br.com.cams7.orders.core.CreateOrderUseCase;
 import br.com.cams7.orders.core.DeleteOrderByIdUseCase;
 import br.com.cams7.orders.core.GetOrderByIdUseCase;
 import br.com.cams7.orders.core.GetOrdersByCountryUseCase;
+import br.com.cams7.orders.core.port.in.CreateOrderUseCasePort;
 import br.com.cams7.orders.core.port.in.DeleteOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrdersByCountryUseCasePort;
+import br.com.cams7.orders.core.port.out.AddShippingOrderServicePort;
+import br.com.cams7.orders.core.port.out.CreateOrderRepositoryPort;
 import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
+import br.com.cams7.orders.core.port.out.GetCartItemsServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerAddressServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerCardServicePort;
+import br.com.cams7.orders.core.port.out.GetCustomerServicePort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
+import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,5 +54,24 @@ public class BeanConfiguration {
   DeleteOrderByIdUseCasePort deleteOrderByIdUseCase(
       DeleteOrderByIdRepositoryPort deleteOrderByIdRepository) {
     return new DeleteOrderByIdUseCase(deleteOrderByIdRepository);
+  }
+
+  @Bean
+  CreateOrderUseCasePort createOrderUseCase(
+      GetCustomerServicePort getCustomerService,
+      GetCustomerAddressServicePort getCustomerAddressService,
+      GetCustomerCardServicePort getCustomerCardService,
+      GetCartItemsServicePort getCartItemsService,
+      VerifyPaymentServicePort verifyPaymentService,
+      AddShippingOrderServicePort addShippingOrderService,
+      CreateOrderRepositoryPort createOrderRepository) {
+    return new CreateOrderUseCase(
+        getCustomerService,
+        getCustomerAddressService,
+        getCustomerCardService,
+        getCartItemsService,
+        verifyPaymentService,
+        addShippingOrderService,
+        createOrderRepository);
   }
 }

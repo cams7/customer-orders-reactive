@@ -1,15 +1,33 @@
 package br.com.cams7.orders.adapter.controller;
 
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_DESCRIPTION;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_EXAMPLE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_DESCRIPTION;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_EXAMPLE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_200_CODE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_200_OK;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_201_CODE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_201_CREATED;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_400_BAD_REQUEST;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_400_CODE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_500_BAD_INTERNAL_SERVER_ERROR;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_500_CODE;
 import static br.com.cams7.orders.core.utils.DateUtils.getFormattedDateTime;
 import static io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER;
+import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
+import br.com.cams7.orders.adapter.controller.request.CreateOrderRequest;
 import br.com.cams7.orders.adapter.controller.response.OrderResponse;
 import br.com.cams7.orders.core.domain.OrderEntity;
+import br.com.cams7.orders.core.port.in.CreateOrderUseCasePort;
 import br.com.cams7.orders.core.port.in.DeleteOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrderByIdUseCasePort;
 import br.com.cams7.orders.core.port.in.GetOrdersByCountryUseCasePort;
+import br.com.cams7.orders.core.port.in.params.CreateOrderCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -23,6 +41,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -37,22 +57,10 @@ import reactor.core.publisher.Mono;
 @RequestMapping(path = "/orders", produces = APPLICATION_JSON_VALUE)
 public class OrderController {
 
-  private static final String COUNTRY_HEADER = "country";
-  private static final String COUNTRY_DESCRIPTION = "Customer country";
-  private static final String COUNTRY_EXAMPLE = "BR";
-  private static final String REQUEST_TRACE_ID_HEADER = "requestTraceId";
-  private static final String REQUEST_TRACE_ID_DESCRIPTION = "Cross transaction unique ID";
-  private static final String REQUEST_TRACE_ID_EXAMPLE = "123BR";
-  private static final String STATUS_200_CODE = "200";
-  private static final String STATUS_200_OK = "Ok";
-  private static final String STATUS_400_CODE = "400";
-  private static final String STATUS_400_BAD_REQUEST = "Bad Request";
-  private static final String STATUS_500_CODE = "500";
-  private static final String STATUS_500_BAD_INTERNAL_SERVER_ERROR = "Internal Server Error";
-
   private final GetOrdersByCountryUseCasePort getOrdersByCountryUseCase;
   private final GetOrderByIdUseCasePort getOrderByIdUseCase;
   private final DeleteOrderByIdUseCasePort deleteOrderByIdUseCase;
+  private final CreateOrderUseCasePort createOrderUseCase;
   private final ModelMapper modelMapper;
 
   @Operation(description = "Get orders")
@@ -171,9 +179,52 @@ public class OrderController {
     return deleteOrderByIdUseCase.execute(country, orderId);
   }
 
+  @Operation(description = "Create order")
+  @Parameters({
+    @Parameter(
+        name = COUNTRY_HEADER,
+        in = HEADER,
+        required = true,
+        description = COUNTRY_DESCRIPTION,
+        example = COUNTRY_EXAMPLE),
+    @Parameter(
+        name = REQUEST_TRACE_ID_HEADER,
+        in = HEADER,
+        required = true,
+        description = REQUEST_TRACE_ID_DESCRIPTION,
+        example = REQUEST_TRACE_ID_EXAMPLE)
+  })
+  @ApiResponses({
+    @ApiResponse(responseCode = STATUS_201_CODE, description = STATUS_201_CREATED),
+    @ApiResponse(
+        responseCode = STATUS_400_CODE,
+        description = STATUS_400_BAD_REQUEST,
+        content = @Content(schema = @Schema(hidden = true))),
+    @ApiResponse(
+        responseCode = STATUS_500_CODE,
+        description = STATUS_500_BAD_INTERNAL_SERVER_ERROR,
+        content = @Content(schema = @Schema(hidden = true)))
+  })
+  @PostMapping(consumes = APPLICATION_JSON_VALUE)
+  @ResponseStatus(CREATED)
+  Mono<OrderResponse> createOrder(
+      @RequestHeader(COUNTRY_HEADER) String country,
+      @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId,
+      @RequestBody CreateOrderRequest request) {
+    return createOrderUseCase.execute(country, getCreateOrder(request)).map(this::getOrder);
+  }
+
   private OrderResponse getOrder(OrderEntity entity) {
     var response = modelMapper.map(entity, OrderResponse.class);
     response.setRegistrationDate(getFormattedDateTime(entity.getRegistrationDate()));
     return response;
+  }
+
+  private CreateOrderCommand getCreateOrder(CreateOrderRequest request) {
+    return new CreateOrderCommand(
+        request.getCustomerUrl(),
+        request.getAddressUrl(),
+        request.getCardUrl(),
+        request.getItemsUrl());
   }
 }

@@ -29,14 +29,13 @@ function verifyPayment(req, res, path) {
   sendResponse(req, res, path, (send, req, res, path, responseBody) => {
     const payment = getJsonData(responseBody);
 
-    if(payment && payment.orderId && payment.amount) {
+    if(payment && payment.customerId && payment.amount) {
       const declineOverAmount = 100.0;
-
-      if(payment.amount <= declineOverAmount) {
-        res.status(OK);
+      
+      res.status(OK);
+      if(payment.amount <= declineOverAmount) {        
         send.call(res, JSON.stringify({authorised: true, message: 'Payment authorised'}));
       } else {
-        res.status(BAD_REQUEST);
         send.call(res, JSON.stringify({authorised: false, message: `Payment declined: amount exceeds ${declineOverAmount.toFixed(2)}`}));  
       }      
     } else {

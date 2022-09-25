@@ -28,4 +28,6 @@ public class OrderEntity {
   private ZonedDateTime registrationDate;
 
   private Float totalAmount;
+
+  private Payment payment;
 }
