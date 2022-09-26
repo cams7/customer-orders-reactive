@@ -12,6 +12,8 @@ import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_201_CODE;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_201_CREATED;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_400_BAD_REQUEST;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_400_CODE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_404_CODE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_404_NOT_FOUND;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_500_BAD_INTERNAL_SERVER_ERROR;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.STATUS_500_CODE;
 import static br.com.cams7.orders.core.utils.DateUtils.getFormattedDateTime;
@@ -199,6 +201,10 @@ public class OrderController {
     @ApiResponse(
         responseCode = STATUS_400_CODE,
         description = STATUS_400_BAD_REQUEST,
+        content = @Content(schema = @Schema(hidden = true))),
+    @ApiResponse(
+        responseCode = STATUS_404_CODE,
+        description = STATUS_404_NOT_FOUND,
         content = @Content(schema = @Schema(hidden = true))),
     @ApiResponse(
         responseCode = STATUS_500_CODE,

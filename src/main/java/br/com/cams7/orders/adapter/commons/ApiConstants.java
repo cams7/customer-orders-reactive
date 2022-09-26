@@ -1,5 +1,12 @@
 package br.com.cams7.orders.adapter.commons;
 
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.BAD_REQUEST_CODE;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.BAD_REQUEST_NAME;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.INTERNAL_SERVER_ERROR_CODE;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.INTERNAL_SERVER_ERROR_NAME;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.NOT_FOUND_CODE;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.NOT_FOUND_NAME;
+
 public final class ApiConstants {
 
   public static final String COUNTRY_HEADER = "country";
@@ -12,8 +19,10 @@ public final class ApiConstants {
   public static final String STATUS_200_OK = "Ok";
   public static final String STATUS_201_CODE = "201";
   public static final String STATUS_201_CREATED = "Created";
-  public static final String STATUS_400_CODE = "400";
-  public static final String STATUS_400_BAD_REQUEST = "Bad Request";
-  public static final String STATUS_500_CODE = "500";
-  public static final String STATUS_500_BAD_INTERNAL_SERVER_ERROR = "Internal Server Error";
+  public static final String STATUS_400_CODE = "" + BAD_REQUEST_CODE + "";
+  public static final String STATUS_400_BAD_REQUEST = BAD_REQUEST_NAME;
+  public static final String STATUS_404_CODE = "" + NOT_FOUND_CODE + "";
+  public static final String STATUS_404_NOT_FOUND = NOT_FOUND_NAME;
+  public static final String STATUS_500_CODE = "" + INTERNAL_SERVER_ERROR_CODE + "";
+  public static final String STATUS_500_BAD_INTERNAL_SERVER_ERROR = INTERNAL_SERVER_ERROR_NAME;
 }
