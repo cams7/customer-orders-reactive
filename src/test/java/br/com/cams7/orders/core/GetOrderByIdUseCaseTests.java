@@ -1,8 +1,8 @@
 package br.com.cams7.orders.core;
 
-import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_ENTITY;
-import static br.com.cams7.orders.template.OrderEntityTemplate.CUSTOMER_ADDRESS_COUNTRY;
-import static br.com.cams7.orders.template.OrderEntityTemplate.ORDER_ID;
+import static br.com.cams7.orders.template.DomainTemplateLoader.AUTHORISED_ORDER_ENTITY;
+import static br.com.cams7.orders.template.domain.CustomerAddressTemplate.CUSTOMER_ADDRESS_COUNTRY;
+import static br.com.cams7.orders.template.domain.OrderEntityTemplate.ORDER_ID;
 import static br.com.six2six.fixturefactory.Fixture.from;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,7 +31,7 @@ public class GetOrderByIdUseCaseTests extends BaseTests {
   @Test
   @DisplayName("Should get order when pass valid order id")
   void shouldGetOrderWhenPassValidOrderId() {
-    OrderEntity order = from(OrderEntity.class).gimme(ORDER_ENTITY);
+    OrderEntity order = from(OrderEntity.class).gimme(AUTHORISED_ORDER_ENTITY);
 
     given(getOrderByIdRepository.getOrder(anyString(), anyString())).willReturn(Mono.just(order));
 

@@ -1,7 +1,7 @@
 package br.com.cams7.orders.adapter.controller;
 
-import static br.com.cams7.orders.template.OrderEntityTemplate.CUSTOMER_ADDRESS_COUNTRY;
-import static br.com.cams7.orders.template.OrderEntityTemplate.ORDER_ID;
+import static br.com.cams7.orders.template.domain.CustomerAddressTemplate.CUSTOMER_ADDRESS_COUNTRY;
+import static br.com.cams7.orders.template.domain.OrderEntityTemplate.ORDER_ID;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;

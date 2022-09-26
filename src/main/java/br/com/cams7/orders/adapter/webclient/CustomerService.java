@@ -1,5 +1,8 @@
 package br.com.cams7.orders.adapter.webclient;
 
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
+
 import br.com.cams7.orders.adapter.webclient.response.CustomerAddressResponse;
 import br.com.cams7.orders.adapter.webclient.response.CustomerCardResponse;
 import br.com.cams7.orders.adapter.webclient.response.CustomerResponse;
@@ -17,7 +20,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
-public class CustomerService
+public class CustomerService extends BaseWebclient
     implements GetCustomerServicePort, GetCustomerAddressServicePort, GetCustomerCardServicePort {
 
   private final WebClient.Builder builder;
@@ -27,6 +30,8 @@ public class CustomerService
   public Mono<Customer> getCustomer(String customerUrl) {
     return getWebClient(builder, customerUrl)
         .get()
+        .header(COUNTRY_HEADER, getCountry())
+        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
         .retrieve()
         .bodyToMono(CustomerResponse.class)
         .map(this::getCustomer);
@@ -36,6 +41,8 @@ public class CustomerService
   public Mono<CustomerAddress> getCustomerAddress(String addressUrl) {
     return getWebClient(builder, addressUrl)
         .get()
+        .header(COUNTRY_HEADER, getCountry())
+        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
         .retrieve()
         .bodyToMono(CustomerAddressResponse.class)
         .map(this::getCustomerAddress);
@@ -45,24 +52,28 @@ public class CustomerService
   public Mono<CustomerCard> getCustomerCard(String cardUrl) {
     return getWebClient(builder, cardUrl)
         .get()
+        .header(COUNTRY_HEADER, getCountry())
+        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
         .retrieve()
         .bodyToMono(CustomerCardResponse.class)
         .map(this::getCustomerCard);
   }
 
-  private static WebClient getWebClient(WebClient.Builder builder, String url) {
-    return builder.baseUrl(url).build();
-  }
-
   private Customer getCustomer(CustomerResponse response) {
-    return modelMapper.map(response, Customer.class);
+    var customer = modelMapper.map(response, Customer.class);
+    customer.setCustomerId(response.getId());
+    return customer;
   }
 
   private CustomerAddress getCustomerAddress(CustomerAddressResponse response) {
-    return modelMapper.map(response, CustomerAddress.class);
+    var customerAddress = modelMapper.map(response, CustomerAddress.class);
+    customerAddress.setAddressId(response.getId());
+    return customerAddress;
   }
 
   private CustomerCard getCustomerCard(CustomerCardResponse response) {
-    return modelMapper.map(response, CustomerCard.class);
+    var customerCard = modelMapper.map(response, CustomerCard.class);
+    customerCard.setCardId(response.getId());
+    return customerCard;
   }
 }

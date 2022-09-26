@@ -1,6 +1,7 @@
 package br.com.cams7.orders.adapter.webclient;
 
-import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import br.com.cams7.orders.adapter.webclient.request.ShippingRequest;
@@ -14,7 +15,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
-public class ShippingService implements AddShippingOrderServicePort {
+public class ShippingService extends BaseWebclient implements AddShippingOrderServicePort {
 
   private final WebClient.Builder builder;
 
@@ -23,15 +24,13 @@ public class ShippingService implements AddShippingOrderServicePort {
 
   @Override
   public Mono<String> add(String orderId) {
-    return getWebClient(builder, shippingUrl)
+    return getWebClient(builder, APPLICATION_JSON_VALUE, shippingUrl)
         .post()
+        .header(COUNTRY_HEADER, getCountry())
+        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
         .body(Mono.just(new ShippingRequest(orderId)), ShippingRequest.class)
         .retrieve()
         .bodyToMono(ShippingResponse.class)
         .map(shipping -> shipping.getId());
-  }
-
-  private static WebClient getWebClient(WebClient.Builder builder, String url) {
-    return builder.baseUrl(url).defaultHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE).build();
   }
 }

@@ -37,22 +37,17 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
             getCustomerService.getCustomer(command.getCustomerUrl()),
             getCustomerAddressService.getCustomerAddress(command.getAddressUrl()),
             getCustomerCardService.getCustomerCard(command.getCardUrl()))
-        .flatMap(
+        .map(
             t ->
-                verifyCustomer(
-                    new OrderEntity()
-                        .withCustomer(t.getT1())
-                        .withAddress(t.getT2())
-                        .withCard(t.getT3())))
+                new OrderEntity()
+                    .withCustomer(t.getT1())
+                    .withAddress(t.getT2())
+                    .withCard(t.getT3()))
         .zipWith(getCartItemsService.getCartItems(command.getItemsUrl()).collectList())
         .flatMap(t -> verifyCartItems(t.getT1().withItems(t.getT2())))
         .flatMap(this::verifyPayment)
         .flatMap(this::createOrder)
         .flatMap(this::addShippingOrder);
-  }
-
-  private Mono<OrderEntity> verifyCustomer(OrderEntity order) {
-    return Mono.just(order);
   }
 
   private Mono<OrderEntity> verifyCartItems(OrderEntity order) {

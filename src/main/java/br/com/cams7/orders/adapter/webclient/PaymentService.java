@@ -1,6 +1,7 @@
 package br.com.cams7.orders.adapter.webclient;
 
-import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
+import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import br.com.cams7.orders.adapter.webclient.request.PaymentRequest;
@@ -16,7 +17,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
-public class PaymentService implements VerifyPaymentServicePort {
+public class PaymentService extends BaseWebclient implements VerifyPaymentServicePort {
 
   private final WebClient.Builder builder;
   private final ModelMapper modelMapper;
@@ -26,16 +27,14 @@ public class PaymentService implements VerifyPaymentServicePort {
 
   @Override
   public Mono<Payment> verify(String customerId, Float amount) {
-    return getWebClient(builder, paymentUrl)
+    return getWebClient(builder, APPLICATION_JSON_VALUE, paymentUrl)
         .post()
+        .header(COUNTRY_HEADER, getCountry())
+        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
         .body(Mono.just(new PaymentRequest(customerId, amount)), PaymentRequest.class)
         .retrieve()
         .bodyToMono(PaymentResponse.class)
         .map(this::getPayment);
-  }
-
-  private static WebClient getWebClient(WebClient.Builder builder, String url) {
-    return builder.baseUrl(url).defaultHeader(CONTENT_TYPE, APPLICATION_JSON_VALUE).build();
   }
 
   private Payment getPayment(PaymentResponse response) {
