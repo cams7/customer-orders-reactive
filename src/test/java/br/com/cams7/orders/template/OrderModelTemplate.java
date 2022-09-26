@@ -4,9 +4,6 @@ import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_MODEL;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM1_PRODUCT_ID;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM1_QUANTITY;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM1_UNIT_PRICE;
-import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM2_PRODUCT_ID;
-import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM2_QUANTITY;
-import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM2_UNIT_PRICE;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM3_PRODUCT_ID;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM3_QUANTITY;
 import static br.com.cams7.orders.template.domain.CartItemTemplate.CART_ITEM3_UNIT_PRICE;
@@ -22,7 +19,7 @@ import static br.com.cams7.orders.template.domain.CustomerCardTemplate.CUSTOMER_
 import static br.com.cams7.orders.template.domain.CustomerTemplate.CUSTOMER_FULLNAME;
 import static br.com.cams7.orders.template.domain.CustomerTemplate.CUSTOMER_ID;
 import static br.com.cams7.orders.template.domain.CustomerTemplate.CUSTOMER_USERNAME;
-import static br.com.cams7.orders.template.domain.OrderEntityTemplate.DECLINED_TOTAL_AMOUNT;
+import static br.com.cams7.orders.template.domain.OrderEntityTemplate.AUTHORISED_TOTAL_AMOUNT;
 import static br.com.cams7.orders.template.domain.OrderEntityTemplate.ORDER_ID;
 import static br.com.cams7.orders.template.domain.OrderEntityTemplate.REGISTRATION_DATE;
 import static br.com.six2six.fixturefactory.Fixture.of;
@@ -67,11 +64,9 @@ public final class OrderModelTemplate {
                         new CartItem(
                             CART_ITEM1_PRODUCT_ID, CART_ITEM1_QUANTITY, CART_ITEM1_UNIT_PRICE),
                         new CartItem(
-                            CART_ITEM2_PRODUCT_ID, CART_ITEM2_QUANTITY, CART_ITEM2_UNIT_PRICE),
-                        new CartItem(
                             CART_ITEM3_PRODUCT_ID, CART_ITEM3_QUANTITY, CART_ITEM3_UNIT_PRICE)));
                 add("registrationDate", LocalDateTime.parse(REGISTRATION_DATE, ISO_DATE_TIME));
-                add("total", DECLINED_TOTAL_AMOUNT);
+                add("total", AUTHORISED_TOTAL_AMOUNT);
               }
             });
   }

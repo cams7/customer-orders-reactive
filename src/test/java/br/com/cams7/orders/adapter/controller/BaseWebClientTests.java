@@ -1,17 +1,12 @@
-package br.com.cams7.orders.adapter.webclient;
+package br.com.cams7.orders.adapter.controller;
 
-import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
-import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
-import static br.com.cams7.orders.template.domain.CustomerAddressTemplate.CUSTOMER_ADDRESS_COUNTRY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import br.com.cams7.orders.BaseTests;
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mock;
-import org.slf4j.MDC;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec;
@@ -19,29 +14,22 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public abstract class BaseWebClientTests extends BaseTests {
-  protected static final String REQUEST_TRACE_ID = "123";
 
-  @Mock private Builder builder;
+  @MockBean private Builder builder;
 
-  @BeforeEach
-  void addRequestTraceAndCountry() {
-    MDC.put(REQUEST_TRACE_ID_HEADER, REQUEST_TRACE_ID);
-    MDC.put(COUNTRY_HEADER, CUSTOMER_ADDRESS_COUNTRY);
-  }
-
-  protected <R> void mockWebClientForGet(Mono<R> response, Class<R> responseType) {
-    var responseMock = getWebClientMockForGet();
+  protected <R> void mockWebClientForGet(String url, Mono<R> response, Class<R> responseType) {
+    var responseMock = getWebClientMockForGet(url);
     given(responseMock.bodyToMono(responseType)).willReturn(response);
   }
 
-  protected <R> void mockWebClientForGet(Flux<R> response, Class<R> responseType) {
-    var responseMock = getWebClientMockForGet();
+  protected <R> void mockWebClientForGet(String url, Flux<R> response, Class<R> responseType) {
+    var responseMock = getWebClientMockForGet(url);
     given(responseMock.bodyToFlux(responseType)).willReturn(response);
   }
 
   @SuppressWarnings("unchecked")
-  private ResponseSpec getWebClientMockForGet() {
-    var webClientMock = getWebClientMock(false);
+  private ResponseSpec getWebClientMockForGet(String url) {
+    var webClientMock = getWebClientMock(url, false);
     var requestHeadersUriMock = mock(WebClient.RequestHeadersUriSpec.class);
     var requestHeadersMock = mock(WebClient.RequestHeadersSpec.class);
     var responseMock = mock(WebClient.ResponseSpec.class);
@@ -54,8 +42,8 @@ public abstract class BaseWebClientTests extends BaseTests {
   }
 
   @SuppressWarnings("unchecked")
-  protected void mockWebClientForDelete() {
-    var webClientMock = getWebClientMock(false);
+  protected void mockWebClientForDelete(String url) {
+    var webClientMock = getWebClientMock(url, false);
     var requestHeadersUriMock = mock(WebClient.RequestHeadersUriSpec.class);
     var requestHeadersMock = mock(WebClient.RequestHeadersSpec.class);
     var responseMock = mock(WebClient.ResponseSpec.class);
@@ -68,8 +56,8 @@ public abstract class BaseWebClientTests extends BaseTests {
   }
 
   @SuppressWarnings("unchecked")
-  protected <R> void mockWebClientForPost(Mono<R> response, Class<R> responseType) {
-    var webClientMock = getWebClientMock(true);
+  protected <R> void mockWebClientForPost(String url, Mono<R> response, Class<R> responseType) {
+    var webClientMock = getWebClientMock(url, true);
     var requestBodyUriMock = mock(WebClient.RequestBodyUriSpec.class);
     var requestHeadersMock = mock(WebClient.RequestHeadersSpec.class);
     var requestBodyMock = mock(WebClient.RequestBodySpec.class);
@@ -83,11 +71,11 @@ public abstract class BaseWebClientTests extends BaseTests {
     given(responseMock.bodyToMono(responseType)).willReturn(response);
   }
 
-  private WebClient getWebClientMock(boolean hasDefaultHeader) {
+  private WebClient getWebClientMock(String url, boolean hasDefaultHeader) {
     var builderMock = mock(Builder.class);
     var webClientMock = mock(WebClient.class);
 
-    given(builder.baseUrl(anyString())).willReturn(builderMock);
+    given(builder.baseUrl(url)).willReturn(builderMock);
     if (hasDefaultHeader)
       given(builderMock.defaultHeader(anyString(), anyString())).willReturn(builderMock);
     given(builderMock.build()).willReturn(webClientMock);
