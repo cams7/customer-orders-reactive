@@ -3,10 +3,13 @@ package br.com.cams7.orders.adapter.controller;
 import static br.com.cams7.orders.adapter.repository.model.OrderModel.COLLECTION_NAME;
 import static br.com.cams7.orders.template.DomainTemplateLoader.AUTHORISED_PAYMENT_RESPONSE;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CART_ITEM_RESPONSE1;
+import static br.com.cams7.orders.template.DomainTemplateLoader.CART_ITEM_RESPONSE2;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CART_ITEM_RESPONSE3;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CUSTOMER_ADDRESS_RESPONSE;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CUSTOMER_CARD_RESPONSE;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CUSTOMER_RESPONSE;
+import static br.com.cams7.orders.template.DomainTemplateLoader.DECLINED_PAYMENT_RESPONSE;
+import static br.com.cams7.orders.template.DomainTemplateLoader.INVALID_CREATE_ORDER_REQUEST;
 import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_MODEL;
 import static br.com.cams7.orders.template.DomainTemplateLoader.ORDER_RESPONSE;
 import static br.com.cams7.orders.template.DomainTemplateLoader.SHIPPING_RESPONSE;
@@ -27,7 +30,9 @@ import br.com.cams7.orders.adapter.webclient.response.CustomerCardResponse;
 import br.com.cams7.orders.adapter.webclient.response.CustomerResponse;
 import br.com.cams7.orders.adapter.webclient.response.PaymentResponse;
 import br.com.cams7.orders.adapter.webclient.response.ShippingResponse;
+import br.com.cams7.orders.core.port.out.exception.ResponseStatusException;
 import java.util.List;
+import javax.validation.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,6 +48,13 @@ import reactor.core.publisher.Mono;
 public class OrderControllerTests extends BaseIntegrationTests {
 
   private static final String INVALID_COUNTRY = "DO";
+  private static final String PAYMENT_URL = "http://test/payments";
+  private static final String SHIPPING_URL = "http://test/shippings";
+
+  private static final String PATH = "/orders";
+
+  private static String ERRORS0_MESSAGE_ATTRIBUTE = "$.errors[0].message";
+  private static String ERRORS0_FIELD_ATTRIBUTE = "$.errors[0].field";
 
   @AfterEach
   void dropCollection() {
@@ -59,7 +71,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .get()
-        .uri("/orders")
+        .uri(PATH)
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -75,7 +87,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
   void shouldReturnEmptyListWhenAccessingGetOrdersAPIAndDoesNotHaveAnyOrders() {
     testClient
         .get()
-        .uri("/orders")
+        .uri(PATH)
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -95,7 +107,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .get()
-        .uri("/orders")
+        .uri(PATH)
         .header("country", INVALID_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -115,7 +127,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .get()
-        .uri("/orders/{orderId}", model.getId())
+        .uri(String.format("%s/{orderId}", PATH), model.getId())
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -130,7 +142,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
   void shouldReturnEmptyWhenAccessingGetOrderAPIAndDoesNotHaveOrder() {
     testClient
         .get()
-        .uri("/orders/{orderId}", ORDER_ID)
+        .uri(String.format("%s/{orderId}", PATH), ORDER_ID)
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -149,7 +161,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .get()
-        .uri("/orders/{orderId}", model.getId())
+        .uri(String.format("%s/{orderId}", PATH), model.getId())
         .header("country", INVALID_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -168,7 +180,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .delete()
-        .uri("/orders/{orderId}", model.getId())
+        .uri(String.format("%s/{orderId}", PATH), model.getId())
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -192,7 +204,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
   void shouldDoNothingWhenAccessingDeleteOrderAPIAndDoesNotHaveOrder() {
     testClient
         .delete()
-        .uri("/orders/{orderId}", ORDER_ID)
+        .uri(String.format("%s/{orderId}", PATH), ORDER_ID)
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -211,7 +223,7 @@ public class OrderControllerTests extends BaseIntegrationTests {
 
     testClient
         .delete()
-        .uri("/orders/{orderId}", model.getId())
+        .uri(String.format("%s/{orderId}", PATH), model.getId())
         .header("country", INVALID_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .exchange()
@@ -257,13 +269,12 @@ public class OrderControllerTests extends BaseIntegrationTests {
         request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
     mockWebClientForGet(
         request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
-    mockWebClientForPost("http://test/payments", Mono.just(paymentResponse), PaymentResponse.class);
-    mockWebClientForPost(
-        "http://test/shippings", Mono.just(shippingResponse), ShippingResponse.class);
+    mockWebClientForPost(PAYMENT_URL, Mono.just(paymentResponse), PaymentResponse.class);
+    mockWebClientForPost(SHIPPING_URL, Mono.just(shippingResponse), ShippingResponse.class);
 
     testClient
         .post()
-        .uri("/orders")
+        .uri(PATH)
         .header("country", CUSTOMER_ADDRESS_COUNTRY)
         .header("requestTraceId", REQUEST_TRACE_ID)
         .body(BodyInserters.fromValue(request))
@@ -311,6 +322,178 @@ public class OrderControllerTests extends BaseIntegrationTests {
         .isNotEmpty()
         .jsonPath("$.totalAmount")
         .isEqualTo(response.getTotalAmount());
+
+    create(
+            mongoOperations.count(
+                new Query().addCriteria(where("id").exists(true)),
+                OrderModel.class,
+                getCollectionName(CUSTOMER_ADDRESS_COUNTRY, COLLECTION_NAME)))
+        .expectSubscription()
+        .expectNext(1l)
+        .verifyComplete();
+  }
+
+  @Test
+  @DisplayName(
+      "Should return bad request status when accessing 'create order' API and decline payment")
+  void shouldReturnBadRequestStatusWhenAccessingCreateOrderAPIAndDeclinePayment() {
+    CreateOrderRequest request = from(CreateOrderRequest.class).gimme(VALID_CREATE_ORDER_REQUEST);
+
+    CustomerResponse customerResponse = from(CustomerResponse.class).gimme(CUSTOMER_RESPONSE);
+    CustomerAddressResponse customerAddressResponse =
+        from(CustomerAddressResponse.class).gimme(CUSTOMER_ADDRESS_RESPONSE);
+    CustomerCardResponse customerCardResponse =
+        from(CustomerCardResponse.class).gimme(CUSTOMER_CARD_RESPONSE);
+    List<CartItemResponse> cartItemsResponse =
+        List.of(
+            from(CartItemResponse.class).gimme(CART_ITEM_RESPONSE1),
+            from(CartItemResponse.class).gimme(CART_ITEM_RESPONSE2),
+            from(CartItemResponse.class).gimme(CART_ITEM_RESPONSE3));
+    PaymentResponse paymentResponse = from(PaymentResponse.class).gimme(DECLINED_PAYMENT_RESPONSE);
+
+    mockWebClientForGet(
+        request.getCustomerUrl(), Mono.just(customerResponse), CustomerResponse.class);
+    mockWebClientForGet(
+        request.getAddressUrl(), Mono.just(customerAddressResponse), CustomerAddressResponse.class);
+    mockWebClientForGet(
+        request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
+    mockWebClientForGet(
+        request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
+    mockWebClientForPost(PAYMENT_URL, Mono.just(paymentResponse), PaymentResponse.class);
+
+    testClient
+        .post()
+        .uri(PATH)
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .body(BodyInserters.fromValue(request))
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody()
+        .jsonPath(TIMESTAMP_ATTRIBUTE)
+        .isNotEmpty()
+        .jsonPath(PATH_ATTRIBUTE)
+        .isEqualTo(PATH)
+        .jsonPath(STATUS_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_CODE)
+        .jsonPath(ERROR_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_NAME)
+        .jsonPath(MESSAGE_ATTRIBUTE)
+        .isEqualTo(paymentResponse.getMessage())
+        .jsonPath(REQUESTID_ATTRIBUTE)
+        .isEqualTo(REQUEST_TRACE_ID)
+        .jsonPath(EXCEPTION_ATTRIBUTE)
+        .isEqualTo(ResponseStatusException.class.getName());
+
+    create(
+            mongoOperations.count(
+                new Query().addCriteria(where("id").exists(true)),
+                OrderModel.class,
+                getCollectionName(CUSTOMER_ADDRESS_COUNTRY, COLLECTION_NAME)))
+        .expectSubscription()
+        .expectNext(0l)
+        .verifyComplete();
+  }
+
+  @Test
+  @DisplayName(
+      "Should return bad request status when accessing 'create order' API and don't have cart items")
+  void shouldReturnBadRequestStatusWhenAccessingCreateOrderAPIAndDoNotHaveCartItems() {
+    CreateOrderRequest request = from(CreateOrderRequest.class).gimme(VALID_CREATE_ORDER_REQUEST);
+
+    CustomerResponse customerResponse = from(CustomerResponse.class).gimme(CUSTOMER_RESPONSE);
+    CustomerAddressResponse customerAddressResponse =
+        from(CustomerAddressResponse.class).gimme(CUSTOMER_ADDRESS_RESPONSE);
+    CustomerCardResponse customerCardResponse =
+        from(CustomerCardResponse.class).gimme(CUSTOMER_CARD_RESPONSE);
+    List<CartItemResponse> cartItemsResponse = List.of();
+
+    mockWebClientForGet(
+        request.getCustomerUrl(), Mono.just(customerResponse), CustomerResponse.class);
+    mockWebClientForGet(
+        request.getAddressUrl(), Mono.just(customerAddressResponse), CustomerAddressResponse.class);
+    mockWebClientForGet(
+        request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
+    mockWebClientForGet(
+        request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
+
+    testClient
+        .post()
+        .uri(PATH)
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .body(BodyInserters.fromValue(request))
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody()
+        .jsonPath(TIMESTAMP_ATTRIBUTE)
+        .isNotEmpty()
+        .jsonPath(PATH_ATTRIBUTE)
+        .isEqualTo(PATH)
+        .jsonPath(STATUS_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_CODE)
+        .jsonPath(ERROR_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_NAME)
+        .jsonPath(MESSAGE_ATTRIBUTE)
+        .isEqualTo("There aren't items in the cart")
+        .jsonPath(REQUESTID_ATTRIBUTE)
+        .isEqualTo(REQUEST_TRACE_ID)
+        .jsonPath(EXCEPTION_ATTRIBUTE)
+        .isEqualTo(ResponseStatusException.class.getName());
+
+    create(
+            mongoOperations.count(
+                new Query().addCriteria(where("id").exists(true)),
+                OrderModel.class,
+                getCollectionName(CUSTOMER_ADDRESS_COUNTRY, COLLECTION_NAME)))
+        .expectSubscription()
+        .expectNext(0l)
+        .verifyComplete();
+  }
+
+  @Test
+  @DisplayName(
+      "Should return bad request status when accessing 'create order' API and pass some invalid URL")
+  void shouldReturnBadRequestStatusWhenAccessingCreateOrderAPIAndPassSomeInvalidURL() {
+    CreateOrderRequest request = from(CreateOrderRequest.class).gimme(INVALID_CREATE_ORDER_REQUEST);
+
+    testClient
+        .post()
+        .uri(PATH)
+        .header("country", CUSTOMER_ADDRESS_COUNTRY)
+        .header("requestTraceId", REQUEST_TRACE_ID)
+        .body(BodyInserters.fromValue(request))
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody()
+        .jsonPath(TIMESTAMP_ATTRIBUTE)
+        .isNotEmpty()
+        .jsonPath(PATH_ATTRIBUTE)
+        .isEqualTo(PATH)
+        .jsonPath(STATUS_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_CODE)
+        .jsonPath(ERROR_ATTRIBUTE)
+        .isEqualTo(BAD_REQUEST_NAME)
+        .jsonPath(REQUESTID_ATTRIBUTE)
+        .isEqualTo(REQUEST_TRACE_ID)
+        .jsonPath(EXCEPTION_ATTRIBUTE)
+        .isEqualTo(ConstraintViolationException.class.getName())
+        .jsonPath(ERRORS0_MESSAGE_ATTRIBUTE)
+        .isEqualTo("Invalid customer url")
+        .jsonPath(ERRORS0_FIELD_ATTRIBUTE)
+        .isEqualTo("customerUrl");
+
+    create(
+            mongoOperations.count(
+                new Query().addCriteria(where("id").exists(true)),
+                OrderModel.class,
+                getCollectionName(CUSTOMER_ADDRESS_COUNTRY, COLLECTION_NAME)))
+        .expectSubscription()
+        .expectNext(0l)
+        .verifyComplete();
   }
 
   private void createOrderCollection(String country, OrderModel order) {

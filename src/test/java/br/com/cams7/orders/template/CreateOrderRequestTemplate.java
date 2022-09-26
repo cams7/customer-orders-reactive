@@ -35,14 +35,12 @@ public final class CreateOrderRequestTemplate {
                 add("itemsUrl", ITEMS_URL);
               }
             })
-        .addTemplate(
-            INVALID_CREATE_ORDER_REQUEST,
+        .addTemplate(INVALID_CREATE_ORDER_REQUEST)
+        .inherits(
+            VALID_CREATE_ORDER_REQUEST,
             new Rule() {
               {
                 add("customerUrl", INVALID_URL);
-                add("addressUrl", "");
-                add("cardUrl", INVALID_URL);
-                add("itemsUrl", null);
               }
             });
   }

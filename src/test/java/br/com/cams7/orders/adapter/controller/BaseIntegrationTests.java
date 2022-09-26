@@ -13,13 +13,19 @@ public abstract class BaseIntegrationTests extends BaseWebClientTests {
 
   protected static String TIMESTAMP_ATTRIBUTE = "$.timestamp";
   protected static String PATH_ATTRIBUTE = "$.path";
+  protected static String STATUS_ATTRIBUTE = "$.status";
   protected static String ERROR_ATTRIBUTE = "$.error";
   protected static String MESSAGE_ATTRIBUTE = "$.message";
   protected static String TRACE_ATTRIBUTE = "$.trace";
   protected static String REQUESTID_ATTRIBUTE = "$.requestId";
   protected static String EXCEPTION_ATTRIBUTE = "$.exception";
 
-  protected static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+  protected static final String BAD_REQUEST_NAME = "Bad Request";
+  protected static final int BAD_REQUEST_CODE = 400;
+  public static final String NOT_FOUND_NAME = "Not Found";
+  public static final int NOT_FOUND_CODE = 404;
+  protected static final String INTERNAL_SERVER_ERROR_NAME = "Internal Server Error";
+  protected static final int INTERNAL_SERVER_ERROR_CODE = 500;
 
   protected static final String ERROR_MESSAGE = "Something wrong";
 
