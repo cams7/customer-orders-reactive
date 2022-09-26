@@ -16,6 +16,8 @@ import reactor.blockhound.BlockingOperationError;
 import reactor.core.scheduler.Schedulers;
 
 public abstract class BaseTests {
+  protected static final String ERROR_MESSAGE = "Something wrong";
+
   @BeforeAll
   static void setup() {
     loadTemplates(getPackageName(DomainTemplateLoader.class));

@@ -27,8 +27,6 @@ public abstract class BaseIntegrationTests extends BaseWebClientTests {
   protected static final String INTERNAL_SERVER_ERROR_NAME = "Internal Server Error";
   protected static final int INTERNAL_SERVER_ERROR_CODE = 500;
 
-  protected static final String ERROR_MESSAGE = "Something wrong";
-
   @Autowired protected WebTestClient testClient;
 
   @Autowired protected ReactiveMongoOperations mongoOperations;
