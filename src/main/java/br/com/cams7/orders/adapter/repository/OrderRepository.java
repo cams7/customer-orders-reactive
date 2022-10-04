@@ -9,12 +9,14 @@ import br.com.cams7.orders.core.port.out.CreateOrderRepositoryPort;
 import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
+import br.com.cams7.orders.core.port.out.UpdateShippingByIdRepositoryPort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.mongodb.core.ReactiveMongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,7 +27,8 @@ public class OrderRepository
     implements GetOrdersByCountryRepositoryPort,
         GetOrderByIdRepositoryPort,
         DeleteOrderByIdRepositoryPort,
-        CreateOrderRepositoryPort {
+        CreateOrderRepositoryPort,
+        UpdateShippingByIdRepositoryPort {
 
   private final DateUtils dateUtils;
   private final ReactiveMongoOperations mongoOperations;
@@ -36,14 +39,14 @@ public class OrderRepository
     var query = new Query(Criteria.where("address.country").is(country));
     return mongoOperations
         .find(query, OrderModel.class, getCollectionName(country))
-        .map(this::getOrder);
+        .map(order -> getOrder(country, order));
   }
 
   @Override
   public Mono<OrderEntity> getOrder(String country, String orderId) {
     return mongoOperations
         .findById(orderId, OrderModel.class, getCollectionName(country))
-        .map(this::getOrder);
+        .map(order -> getOrder(country, order));
   }
 
   @Override
@@ -55,13 +58,23 @@ public class OrderRepository
   }
 
   @Override
-  public Mono<OrderEntity> create(OrderEntity order) {
-    var country = order.getAddress().getCountry();
-    return mongoOperations.insert(getOrder(order), getCollectionName(country)).map(this::getOrder);
+  public Mono<OrderEntity> create(String country, OrderEntity order) {
+    return mongoOperations
+        .insert(getOrder(order), getCollectionName(country))
+        .map(registeredOrder -> getOrder(country, registeredOrder));
   }
 
-  private OrderEntity getOrder(OrderModel model) {
-    var country = model.getAddress().getCountry();
+  @Override
+  public Mono<Long> updateShipping(String country, String orderId, Boolean registeredShipping) {
+    var query = new Query(Criteria.where("id").is(orderId));
+    var update = new Update();
+    update.set("registeredShipping", registeredShipping);
+    return mongoOperations
+        .updateFirst(query, update, OrderModel.class, getCollectionName(country))
+        .map(result -> result.getModifiedCount());
+  }
+
+  private OrderEntity getOrder(String country, OrderModel model) {
     var entity =
         modelMapper
             .map(model, OrderEntity.class)

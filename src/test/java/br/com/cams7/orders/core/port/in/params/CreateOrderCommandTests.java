@@ -15,7 +15,6 @@ public class CreateOrderCommandTests {
   @Test
   @DisplayName("Should create command instance when pass valid params")
   void shouldCreateCommandInstanceWhenPassValidParams() {
-
     var customerUrl = "http://localhost/customers/703c327b-8b61-4f32-bf1a-fb3108a6f7e1";
     var addressUrl = "http://localhost:3000/addresses/a679084a-03e7-49c7-9516-5a7d6757e1c2";
     var cardUrl = "https://customers/cards/818c8544-dfb1-49b2-8212-eb9dcdbd57c9";

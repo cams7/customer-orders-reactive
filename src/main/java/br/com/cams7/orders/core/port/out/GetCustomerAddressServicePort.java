@@ -5,5 +5,6 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface GetCustomerAddressServicePort {
-  Mono<CustomerAddress> getCustomerAddress(String addressUrl);
+  Mono<CustomerAddress> getCustomerAddress(
+      String country, String requestTraceId, String addressUrl);
 }

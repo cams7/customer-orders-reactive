@@ -2,7 +2,7 @@ package br.com.cams7.orders.adapter.webclient;
 
 import static br.com.cams7.orders.adapter.commons.ApiConstants.COUNTRY_HEADER;
 import static br.com.cams7.orders.adapter.commons.ApiConstants.REQUEST_TRACE_ID_HEADER;
-import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import br.com.cams7.orders.adapter.webclient.request.PaymentRequest;
 import br.com.cams7.orders.adapter.webclient.response.PaymentResponse;
@@ -26,11 +26,15 @@ public class PaymentService extends BaseWebclient implements VerifyPaymentServic
   private String paymentUrl;
 
   @Override
-  public Mono<Payment> verify(String customerId, Float amount) {
-    return getWebClient(builder, APPLICATION_JSON_VALUE, paymentUrl)
+  public Mono<Payment> verify(
+      String country, String requestTraceId, String customerId, Float amount) {
+    return getWebClient(builder, paymentUrl)
         .post()
-        .header(COUNTRY_HEADER, getCountry())
-        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
+        .uri("/payments")
+        .header(COUNTRY_HEADER, country)
+        .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
+        .accept(APPLICATION_JSON)
+        .contentType(APPLICATION_JSON)
         .body(Mono.just(new PaymentRequest(customerId, amount)), PaymentRequest.class)
         .retrieve()
         .bodyToMono(PaymentResponse.class)

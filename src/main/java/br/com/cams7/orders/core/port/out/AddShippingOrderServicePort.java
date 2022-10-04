@@ -4,5 +4,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface AddShippingOrderServicePort {
-  Mono<String> add(String orderId);
+  Mono<String> add(String country, String requestTraceId, String orderId);
 }

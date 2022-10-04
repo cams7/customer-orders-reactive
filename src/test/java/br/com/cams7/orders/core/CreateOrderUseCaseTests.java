@@ -1,6 +1,7 @@
 package br.com.cams7.orders.core;
 
 import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.BAD_REQUEST_CODE;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.INTERNAL_SERVER_ERROR_CODE;
 import static br.com.cams7.orders.template.DomainTemplateLoader.AUTHORISED_ORDER_ENTITY;
 import static br.com.cams7.orders.template.DomainTemplateLoader.AUTHORISED_PAYMENT;
 import static br.com.cams7.orders.template.DomainTemplateLoader.CART_ITEM1;
@@ -19,6 +20,7 @@ import static br.com.cams7.orders.template.domain.OrderEntityTemplate.ORDER_ID;
 import static br.com.six2six.fixturefactory.Fixture.from;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +45,7 @@ import br.com.cams7.orders.core.port.out.GetCartItemsServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerAddressServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerCardServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerServicePort;
+import br.com.cams7.orders.core.port.out.UpdateShippingByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import br.com.cams7.orders.core.port.out.exception.ResponseStatusException;
 import java.util.List;
@@ -69,6 +72,7 @@ public class CreateOrderUseCaseTests extends BaseTests {
   @Mock private VerifyPaymentServicePort verifyPaymentService;
   @Mock private AddShippingOrderServicePort addShippingOrderService;
   @Mock private CreateOrderRepositoryPort createOrderRepository;
+  @Mock private UpdateShippingByIdRepositoryPort updateShippingByIdRepository;
 
   @Captor private ArgumentCaptor<OrderEntity> orderEntityCaptor;
 
@@ -84,31 +88,55 @@ public class CreateOrderUseCaseTests extends BaseTests {
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
     Payment payment = from(Payment.class).gimme(AUTHORISED_PAYMENT);
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
-    given(verifyPaymentService.verify(anyString(), anyFloat())).willReturn(Mono.just(payment));
-    given(addShippingOrderService.add(anyString())).willReturn(Mono.just(order.getOrderId()));
-    given(createOrderRepository.create(any(OrderEntity.class))).willReturn(Mono.just(order));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
+    given(addShippingOrderService.add(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(order.getOrderId()));
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
+        .willReturn(Mono.just(order));
+    given(updateShippingByIdRepository.updateShipping(anyString(), anyString(), anyBoolean()))
+        .willReturn(Mono.just(1l));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectNext(order)
         .verifyComplete();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
     then(verifyPaymentService)
         .should(times(1))
-        .verify(eq(CUSTOMER_ID), eq(AUTHORISED_TOTAL_AMOUNT));
-    then(addShippingOrderService).should(times(1)).add(eq(ORDER_ID));
-    then(createOrderRepository).should(times(1)).create(orderEntityCaptor.capture());
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(AUTHORISED_TOTAL_AMOUNT));
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
+
     var capturedOrder = orderEntityCaptor.getValue();
 
     assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());
@@ -119,6 +147,95 @@ public class CreateOrderUseCaseTests extends BaseTests {
     assertThat(capturedOrder.getTotalAmount()).isEqualTo(order.getTotalAmount());
     assertThat(capturedOrder.getOrderId()).isNull();
     assertThat(capturedOrder.getRegistrationDate()).isNotNull();
+
+    then(addShippingOrderService)
+        .should(times(1))
+        .add(eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(ORDER_ID));
+
+    then(updateShippingByIdRepository)
+        .should(times(1))
+        .updateShipping(eq(CUSTOMER_ADDRESS_COUNTRY), eq(ORDER_ID), eq(Boolean.TRUE));
+  }
+
+  @Test
+  @DisplayName("Should create order when not get shipping id")
+  void shouldCreateOrderWhenNotGetShippingId() {
+    var createOrder = getCreateOrder();
+    OrderEntity order = from(OrderEntity.class).gimme(AUTHORISED_ORDER_ENTITY);
+    Customer customer = from(Customer.class).gimme(CUSTOMER);
+    CustomerAddress customerAddress = from(CustomerAddress.class).gimme(CUSTOMER_ADDRESS);
+    CustomerCard customerCard = from(CustomerCard.class).gimme(CUSTOMER_CARD);
+    List<CartItem> cartItems =
+        List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
+    Payment payment = from(Payment.class).gimme(AUTHORISED_PAYMENT);
+
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerAddress));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
+    given(addShippingOrderService.add(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(""));
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
+        .willReturn(Mono.just(order));
+    given(updateShippingByIdRepository.updateShipping(anyString(), anyString(), anyBoolean()))
+        .willReturn(Mono.just(1l));
+
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
+        .expectSubscription()
+        .expectNext(order.withRegisteredShipping(false))
+        .verifyComplete();
+
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
+    then(getCustomerAddressService)
+        .should(times(1))
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(times(1))
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(AUTHORISED_TOTAL_AMOUNT));
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
+
+    var capturedOrder = orderEntityCaptor.getValue();
+
+    assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());
+    assertThat(capturedOrder.getAddress()).isEqualTo(order.getAddress());
+    assertThat(capturedOrder.getCard()).isEqualTo(order.getCard());
+    assertThat(capturedOrder.getItems()).isEqualTo(order.getItems());
+    assertThat(capturedOrder.getPayment()).isEqualTo(order.getPayment());
+    assertThat(capturedOrder.getTotalAmount()).isEqualTo(order.getTotalAmount());
+    assertThat(capturedOrder.getOrderId()).isNull();
+    assertThat(capturedOrder.getRegistrationDate()).isNotNull();
+
+    then(addShippingOrderService)
+        .should(times(1))
+        .add(eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(ORDER_ID));
+
+    then(updateShippingByIdRepository)
+        .should(times(1))
+        .updateShipping(eq(CUSTOMER_ADDRESS_COUNTRY), eq(ORDER_ID), eq(Boolean.FALSE));
   }
 
   @Test
@@ -135,29 +252,52 @@ public class CreateOrderUseCaseTests extends BaseTests {
             from(CartItem.class).gimme(CART_ITEM3));
     Payment payment = from(Payment.class).gimme(DECLINED_PAYMENT);
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
-    given(verifyPaymentService.verify(anyString(), anyFloat())).willReturn(Mono.just(payment));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(
             exception ->
                 isResponseStatusException(exception, BAD_REQUEST_CODE, payment.getMessage()))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(times(1)).verify(eq(CUSTOMER_ID), eq(DECLINED_TOTAL_AMOUNT));
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(times(1))
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(DECLINED_TOTAL_AMOUNT));
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -169,13 +309,16 @@ public class CreateOrderUseCaseTests extends BaseTests {
     CustomerCard customerCard = from(CustomerCard.class).gimme(CUSTOMER_CARD);
     List<CartItem> cartItems = List.of();
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(
             exception ->
@@ -183,15 +326,30 @@ public class CreateOrderUseCaseTests extends BaseTests {
                     exception, BAD_REQUEST_CODE, "There aren't items in the cart"))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(never()).verify(anyString(), anyFloat());
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(never())
+        .verify(anyString(), anyString(), anyString(), anyFloat());
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -204,27 +362,44 @@ public class CreateOrderUseCaseTests extends BaseTests {
     List<CartItem> cartItems =
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
 
-    given(getCustomerService.getCustomer(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(never()).verify(anyString(), anyFloat());
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(never())
+        .verify(anyString(), anyString(), anyString(), anyFloat());
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -237,26 +412,44 @@ public class CreateOrderUseCaseTests extends BaseTests {
     List<CartItem> cartItems =
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(never()).verify(anyString(), anyFloat());
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(never())
+        .verify(anyString(), anyString(), anyString(), anyFloat());
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -269,27 +462,44 @@ public class CreateOrderUseCaseTests extends BaseTests {
     List<CartItem> cartItems =
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString()))
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(never()).verify(anyString(), anyFloat());
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(never())
+        .verify(anyString(), anyString(), anyString(), anyFloat());
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -301,27 +511,44 @@ public class CreateOrderUseCaseTests extends BaseTests {
     CustomerAddress customerAddress = from(CustomerAddress.class).gimme(CUSTOMER_ADDRESS);
     CustomerCard customerCard = from(CustomerCard.class).gimme(CUSTOMER_CARD);
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString()))
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
         .willReturn(Flux.error(new RuntimeException(ERROR_MESSAGE)));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(never()).verify(anyString(), anyFloat());
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(never())
+        .verify(anyString(), anyString(), anyString(), anyFloat());
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -337,28 +564,50 @@ public class CreateOrderUseCaseTests extends BaseTests {
             from(CartItem.class).gimme(CART_ITEM2),
             from(CartItem.class).gimme(CART_ITEM3));
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
-    given(verifyPaymentService.verify(anyString(), anyFloat()))
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
-    then(verifyPaymentService).should(times(1)).verify(eq(CUSTOMER_ID), eq(DECLINED_TOTAL_AMOUNT));
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(never()).create(any(OrderEntity.class));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(times(1))
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(DECLINED_TOTAL_AMOUNT));
+    then(createOrderRepository).should(never()).create(anyString(), any(OrderEntity.class));
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -373,31 +622,50 @@ public class CreateOrderUseCaseTests extends BaseTests {
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
     Payment payment = from(Payment.class).gimme(AUTHORISED_PAYMENT);
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
-    given(verifyPaymentService.verify(anyString(), anyFloat())).willReturn(Mono.just(payment));
-    given(createOrderRepository.create(any(OrderEntity.class)))
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
     then(verifyPaymentService)
         .should(times(1))
-        .verify(eq(CUSTOMER_ID), eq(AUTHORISED_TOTAL_AMOUNT));
-    then(addShippingOrderService).should(never()).add(anyString());
-    then(createOrderRepository).should(times(1)).create(orderEntityCaptor.capture());
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(AUTHORISED_TOTAL_AMOUNT));
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
     var capturedOrder = orderEntityCaptor.getValue();
 
     assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());
@@ -408,6 +676,11 @@ public class CreateOrderUseCaseTests extends BaseTests {
     assertThat(capturedOrder.getTotalAmount()).isEqualTo(order.getTotalAmount());
     assertThat(capturedOrder.getOrderId()).isNull();
     assertThat(capturedOrder.getRegistrationDate()).isNotNull();
+
+    then(addShippingOrderService).should(never()).add(anyString(), anyString(), anyString());
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
   }
 
   @Test
@@ -422,32 +695,52 @@ public class CreateOrderUseCaseTests extends BaseTests {
         List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
     Payment payment = from(Payment.class).gimme(AUTHORISED_PAYMENT);
 
-    given(getCustomerService.getCustomer(anyString())).willReturn(Mono.just(customer));
-    given(getCustomerAddressService.getCustomerAddress(anyString()))
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
         .willReturn(Mono.just(customerAddress));
-    given(getCustomerCardService.getCustomerCard(anyString())).willReturn(Mono.just(customerCard));
-    given(getCartItemsService.getCartItems(anyString())).willReturn(Flux.fromIterable(cartItems));
-    given(verifyPaymentService.verify(anyString(), anyFloat())).willReturn(Mono.just(payment));
-    given(createOrderRepository.create(any(OrderEntity.class))).willReturn(Mono.just(order));
-    given(addShippingOrderService.add(anyString()))
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
+        .willReturn(Mono.just(order));
+    given(addShippingOrderService.add(anyString(), anyString(), anyString()))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
 
-    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, createOrder))
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
         .expectSubscription()
         .expectErrorMatches(exception -> isRuntimeException(exception))
         .verify();
 
-    then(getCustomerService).should(times(1)).getCustomer(eq(createOrder.getCustomerUrl()));
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
     then(getCustomerAddressService)
         .should(times(1))
-        .getCustomerAddress(eq(createOrder.getAddressUrl()));
-    then(getCustomerCardService).should(times(1)).getCustomerCard(eq(createOrder.getCardUrl()));
-    then(getCartItemsService).should(times(1)).getCartItems(eq(createOrder.getItemsUrl()));
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
     then(verifyPaymentService)
         .should(times(1))
-        .verify(eq(CUSTOMER_ID), eq(AUTHORISED_TOTAL_AMOUNT));
-    then(addShippingOrderService).should(times(1)).add(eq(ORDER_ID));
-    then(createOrderRepository).should(times(1)).create(orderEntityCaptor.capture());
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(AUTHORISED_TOTAL_AMOUNT));
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
     var capturedOrder = orderEntityCaptor.getValue();
 
     assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());
@@ -458,6 +751,100 @@ public class CreateOrderUseCaseTests extends BaseTests {
     assertThat(capturedOrder.getTotalAmount()).isEqualTo(order.getTotalAmount());
     assertThat(capturedOrder.getOrderId()).isNull();
     assertThat(capturedOrder.getRegistrationDate()).isNotNull();
+
+    then(addShippingOrderService)
+        .should(times(1))
+        .add(eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(ORDER_ID));
+    then(updateShippingByIdRepository)
+        .should(never())
+        .updateShipping(anyString(), anyString(), anyBoolean());
+  }
+
+  @Test
+  @DisplayName("Should throw error when 'update shipping' returns zero")
+  void shouldThrowErrorWhenUpdateShippingReturnsZero() {
+    var createOrder = getCreateOrder();
+    OrderEntity order = from(OrderEntity.class).gimme(AUTHORISED_ORDER_ENTITY);
+    Customer customer = from(Customer.class).gimme(CUSTOMER);
+    CustomerAddress customerAddress = from(CustomerAddress.class).gimme(CUSTOMER_ADDRESS);
+    CustomerCard customerCard = from(CustomerCard.class).gimme(CUSTOMER_CARD);
+    List<CartItem> cartItems =
+        List.of(from(CartItem.class).gimme(CART_ITEM1), from(CartItem.class).gimme(CART_ITEM3));
+    Payment payment = from(Payment.class).gimme(AUTHORISED_PAYMENT);
+
+    given(getCustomerService.getCustomer(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customer));
+    given(getCustomerAddressService.getCustomerAddress(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerAddress));
+    given(getCustomerCardService.getCustomerCard(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(customerCard));
+    given(getCartItemsService.getCartItems(anyString(), anyString(), anyString()))
+        .willReturn(Flux.fromIterable(cartItems));
+    given(verifyPaymentService.verify(anyString(), anyString(), anyString(), anyFloat()))
+        .willReturn(Mono.just(payment));
+    given(addShippingOrderService.add(anyString(), anyString(), anyString()))
+        .willReturn(Mono.just(order.getOrderId()));
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
+        .willReturn(Mono.just(order));
+    given(updateShippingByIdRepository.updateShipping(anyString(), anyString(), anyBoolean()))
+        .willReturn(Mono.just(0l));
+
+    create(createOrderUseCase.execute(CUSTOMER_ADDRESS_COUNTRY, REQUEST_TRACE_ID, createOrder))
+        .expectSubscription()
+        .expectErrorMatches(
+            exception ->
+                isResponseStatusException(
+                    exception,
+                    INTERNAL_SERVER_ERROR_CODE,
+                    String.format(
+                        "The registeredShipping field of order %s hasn't been changed", ORDER_ID)))
+        .verify();
+
+    then(getCustomerService)
+        .should(times(1))
+        .getCustomer(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCustomerUrl()));
+    then(getCustomerAddressService)
+        .should(times(1))
+        .getCustomerAddress(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getAddressUrl()));
+    then(getCustomerCardService)
+        .should(times(1))
+        .getCustomerCard(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getCardUrl()));
+    then(getCartItemsService)
+        .should(times(1))
+        .getCartItems(
+            eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(createOrder.getItemsUrl()));
+    then(verifyPaymentService)
+        .should(times(1))
+        .verify(
+            eq(CUSTOMER_ADDRESS_COUNTRY),
+            eq(REQUEST_TRACE_ID),
+            eq(CUSTOMER_ID),
+            eq(AUTHORISED_TOTAL_AMOUNT));
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
+
+    var capturedOrder = orderEntityCaptor.getValue();
+
+    assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());
+    assertThat(capturedOrder.getAddress()).isEqualTo(order.getAddress());
+    assertThat(capturedOrder.getCard()).isEqualTo(order.getCard());
+    assertThat(capturedOrder.getItems()).isEqualTo(order.getItems());
+    assertThat(capturedOrder.getPayment()).isEqualTo(order.getPayment());
+    assertThat(capturedOrder.getTotalAmount()).isEqualTo(order.getTotalAmount());
+    assertThat(capturedOrder.getOrderId()).isNull();
+    assertThat(capturedOrder.getRegistrationDate()).isNotNull();
+
+    then(addShippingOrderService)
+        .should(times(1))
+        .add(eq(CUSTOMER_ADDRESS_COUNTRY), eq(REQUEST_TRACE_ID), eq(ORDER_ID));
+
+    then(updateShippingByIdRepository)
+        .should(times(1))
+        .updateShipping(eq(CUSTOMER_ADDRESS_COUNTRY), eq(ORDER_ID), eq(Boolean.TRUE));
   }
 
   private static boolean isResponseStatusException(

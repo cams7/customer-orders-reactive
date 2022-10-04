@@ -217,7 +217,9 @@ public class OrderController {
       @RequestHeader(COUNTRY_HEADER) String country,
       @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId,
       @RequestBody CreateOrderRequest request) {
-    return createOrderUseCase.execute(country, getCreateOrder(request)).map(this::getOrder);
+    return createOrderUseCase
+        .execute(country, requestTraceId, getCreateOrder(request))
+        .map(this::getOrder);
   }
 
   private OrderResponse getOrder(OrderEntity entity) {

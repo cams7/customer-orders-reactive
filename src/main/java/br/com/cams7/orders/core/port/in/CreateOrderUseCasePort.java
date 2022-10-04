@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface CreateOrderUseCasePort {
-  Mono<OrderEntity> execute(String country, CreateOrderCommand order);
+  Mono<OrderEntity> execute(String country, String requestTraceId, CreateOrderCommand order);
 }

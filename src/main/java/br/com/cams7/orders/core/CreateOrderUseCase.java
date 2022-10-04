@@ -1,6 +1,8 @@
 package br.com.cams7.orders.core;
 
 import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.BAD_REQUEST_CODE;
+import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.INTERNAL_SERVER_ERROR_CODE;
+import static java.util.regex.Pattern.matches;
 
 import br.com.cams7.orders.core.domain.OrderEntity;
 import br.com.cams7.orders.core.port.in.CreateOrderUseCasePort;
@@ -11,9 +13,11 @@ import br.com.cams7.orders.core.port.out.GetCartItemsServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerAddressServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerCardServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerServicePort;
+import br.com.cams7.orders.core.port.out.UpdateShippingByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import br.com.cams7.orders.core.port.out.exception.ResponseStatusException;
 import java.time.ZonedDateTime;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import reactor.core.publisher.Mono;
@@ -22,6 +26,7 @@ import reactor.core.publisher.Mono;
 public class CreateOrderUseCase implements CreateOrderUseCasePort {
 
   private static final float SHIPPING = 10.5f;
+  private static final String ID_REGEX = "^[\\w\\-]+$";
 
   private final GetCustomerServicePort getCustomerService;
   private final GetCustomerAddressServicePort getCustomerAddressService;
@@ -30,27 +35,36 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
   private final VerifyPaymentServicePort verifyPaymentService;
   private final AddShippingOrderServicePort addShippingOrderService;
   private final CreateOrderRepositoryPort createOrderRepository;
+  private final UpdateShippingByIdRepositoryPort updateShippingByIdRepository;
 
   @Override
-  public Mono<OrderEntity> execute(String country, CreateOrderCommand command) {
+  public Mono<OrderEntity> execute(
+      String country, String requestTraceId, CreateOrderCommand command) {
     return Mono.zip(
-            getCustomerService.getCustomer(command.getCustomerUrl()),
-            getCustomerAddressService.getCustomerAddress(command.getAddressUrl()),
-            getCustomerCardService.getCustomerCard(command.getCardUrl()))
+            getCustomerService.getCustomer(country, requestTraceId, command.getCustomerUrl()),
+            getCustomerAddressService.getCustomerAddress(
+                country, requestTraceId, command.getAddressUrl()),
+            getCustomerCardService.getCustomerCard(country, requestTraceId, command.getCardUrl()))
         .map(
             t ->
                 new OrderEntity()
                     .withCustomer(t.getT1())
                     .withAddress(t.getT2())
                     .withCard(t.getT3()))
-        .zipWith(getCartItemsService.getCartItems(command.getItemsUrl()).collectList())
+        .zipWith(
+            getCartItemsService
+                .getCartItems(country, requestTraceId, command.getItemsUrl())
+                .collectList())
         .flatMap(t -> verifyCartItems(t.getT1().withItems(t.getT2())))
-        .flatMap(this::verifyPayment)
-        .flatMap(this::createOrder)
-        .flatMap(this::addShippingOrder);
+        .flatMap(order -> verifyPayment(country, requestTraceId, order))
+        .flatMap(order -> createOrder(country, order))
+        .flatMap(order -> addShippingOrder(country, requestTraceId, order))
+        .flatMap(
+            shippingAndOrder ->
+                updateShipping(country, shippingAndOrder.shippingId, shippingAndOrder.order));
   }
 
-  private Mono<OrderEntity> verifyCartItems(OrderEntity order) {
+  private static Mono<OrderEntity> verifyCartItems(OrderEntity order) {
     if (CollectionUtils.isEmpty(order.getItems())) {
       return Mono.error(
           new ResponseStatusException("There aren't items in the cart", BAD_REQUEST_CODE));
@@ -58,25 +72,47 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
     return Mono.just(order);
   }
 
-  private Mono<OrderEntity> verifyPayment(OrderEntity order) {
+  private Mono<OrderEntity> verifyPayment(
+      String country, String requestTraceId, OrderEntity order) {
     var customerId = order.getCustomer().getCustomerId();
     var totalAmount = getTotalAmount(order);
     return verifyPaymentService
-        .verify(customerId, totalAmount)
+        .verify(country, requestTraceId, customerId, totalAmount)
         .flatMap(payment -> Mono.just(order.withTotalAmount(totalAmount).withPayment(payment)));
   }
 
-  private Mono<OrderEntity> createOrder(OrderEntity order) {
+  private Mono<OrderEntity> createOrder(String country, OrderEntity order) {
     var payment = order.getPayment();
     if (!payment.isAuthorised()) {
       return Mono.error(new ResponseStatusException(payment.getMessage(), BAD_REQUEST_CODE));
     }
     order.setRegistrationDate(ZonedDateTime.now());
-    return createOrderRepository.create(order);
+    return createOrderRepository.create(country, order);
   }
 
-  private Mono<OrderEntity> addShippingOrder(OrderEntity order) {
-    return addShippingOrderService.add(order.getOrderId()).flatMap(shippingId -> Mono.just(order));
+  private Mono<ShippingAndOrder> addShippingOrder(
+      String country, String requestTraceId, OrderEntity order) {
+    return addShippingOrderService
+        .add(country, requestTraceId, order.getOrderId())
+        .map(shippingId -> new ShippingAndOrder(shippingId, order));
+  }
+
+  private Mono<OrderEntity> updateShipping(String country, String shippingId, OrderEntity order) {
+    var orderId = order.getOrderId();
+    var isRegisteredShipping = shippingId != null && matches(ID_REGEX, shippingId);
+    return updateShippingByIdRepository
+        .updateShipping(country, orderId, isRegisteredShipping)
+        .flatMap(
+            modifiedCount -> {
+              if (modifiedCount != null && modifiedCount > 0) {
+                return Mono.just(order.withRegisteredShipping(isRegisteredShipping));
+              }
+              return Mono.error(
+                  new ResponseStatusException(
+                      String.format(
+                          "The registeredShipping field of order %s hasn't been changed", orderId),
+                      INTERNAL_SERVER_ERROR_CODE));
+            });
   }
 
   private static float getTotalAmount(OrderEntity order) {
@@ -85,5 +121,11 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
                 .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
                 .sum()
             + SHIPPING);
+  }
+
+  @AllArgsConstructor
+  private static class ShippingAndOrder {
+    private String shippingId;
+    private OrderEntity order;
   }
 }

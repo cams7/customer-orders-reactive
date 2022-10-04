@@ -9,8 +9,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 public abstract class BaseIntegrationTests extends BaseWebClientTests {
 
-  protected static final String REQUEST_TRACE_ID = "123";
-
   protected static String TIMESTAMP_ATTRIBUTE = "$.timestamp";
   protected static String PATH_ATTRIBUTE = "$.path";
   protected static String STATUS_ATTRIBUTE = "$.status";

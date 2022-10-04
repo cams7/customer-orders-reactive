@@ -20,11 +20,11 @@ public class CartService extends BaseWebclient implements GetCartItemsServicePor
   private final ModelMapper modelMapper;
 
   @Override
-  public Flux<CartItem> getCartItems(String itemsUrl) {
+  public Flux<CartItem> getCartItems(String country, String requestTraceId, String itemsUrl) {
     return getWebClient(builder, itemsUrl)
         .get()
-        .header(COUNTRY_HEADER, getCountry())
-        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
+        .header(COUNTRY_HEADER, country)
+        .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
         .bodyToFlux(CartItemResponse.class)
         .map(this::getCartItem);

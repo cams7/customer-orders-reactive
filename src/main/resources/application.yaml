@@ -14,8 +14,21 @@ logging:
     ROOT: ${LOG_ROOT_LEVEL:INFO}
       
 api:
-  paymentUrl: ${PAYMENT_URL:http://localhost:3002/payments}
-  shippingUrl: ${SHIPPING_URL:http://localhost:3003/shippings}
+  paymentUrl: ${PAYMENT_URL:http://localhost:8082}
+  shippingUrl: ${SHIPPING_URL:http://localhost:8083}
       
 zone:
   ids: ${ZONE_IDS:DO:"America/Dominica",  BR:"America/Sao_Paulo", AR:"America/Buenos_Aires", EN:"America/New_York",   CO:"America/Bogota", EC:"America/Guayaquil", PE:"America/Lima", ZA:"Africa/Johannesburg", MX:"America/Mexico_City"}
+
+connectionProvider:
+  maxConnections: ${CONNECTION_PROVIDER_MAX_CONNECTIONS:100}
+  maxIdleTimeInSeconds: ${CONNECTION_PROVIDER_MAX_IDLE_TIME_IN_SECONDS:60}
+  maxLifeTimeInSeconds: ${CONNECTION_PROVIDER_MAX_LIFE_TIME_IN_SECONDS:60}
+  
+httpClient:
+  connectTimeoutInMillis: ${HTTP_CLIENT_CONNECT_TIMEOUT_IN_MILLIS:60000}
+  responseTimeoutInSeconds: ${HTTP_CLIENT_RESPONSE_TIMEOUT_IN_SECONDS:10}
+  readTimeoutInSeconds: ${HTTP_CLIENT_READ_TIMEOUT_IN_SECONDS:10}
+
+builder:
+  addClientConnector : ${BUILDER_ADD_CLIENT_CONNECTOR:false}

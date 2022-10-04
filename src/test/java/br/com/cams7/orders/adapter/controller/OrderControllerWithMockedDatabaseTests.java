@@ -31,7 +31,9 @@ import br.com.cams7.orders.core.port.out.CreateOrderRepositoryPort;
 import br.com.cams7.orders.core.port.out.DeleteOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrderByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.GetOrdersByCountryRepositoryPort;
+import br.com.cams7.orders.core.port.out.UpdateShippingByIdRepositoryPort;
 import java.util.List;
+// import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -43,11 +45,12 @@ import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+// @Disabled("Disabled until bug has been fixed!")
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "300000")
 public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests {
 
-  private static final String PAYMENT_URL = "http://test/payments";
+  private static final String PAYMENT_URL = "http://payments";
 
   private static final String PATH = "/orders";
 
@@ -55,6 +58,7 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
   @MockBean private GetOrderByIdRepositoryPort getOrderByIdRepository;
   @MockBean private DeleteOrderByIdRepositoryPort deleteOrderByIdRepository;
   @MockBean private CreateOrderRepositoryPort createOrderRepository;
+  @MockBean private UpdateShippingByIdRepositoryPort updateShippingByIdRepository;
 
   @Captor private ArgumentCaptor<OrderEntity> orderEntityCaptor;
 
@@ -175,17 +179,14 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
     PaymentResponse paymentResponse =
         from(PaymentResponse.class).gimme(AUTHORISED_PAYMENT_RESPONSE);
 
-    mockWebClientForGet(
-        request.getCustomerUrl(), Mono.just(customerResponse), CustomerResponse.class);
-    mockWebClientForGet(
+    mockGet(request.getCustomerUrl(), Mono.just(customerResponse), CustomerResponse.class);
+    mockGet(
         request.getAddressUrl(), Mono.just(customerAddressResponse), CustomerAddressResponse.class);
-    mockWebClientForGet(
-        request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
-    mockWebClientForGet(
-        request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
-    mockWebClientForPost(PAYMENT_URL, Mono.just(paymentResponse), PaymentResponse.class);
+    mockGet(request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
+    mockGet(request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
+    mockPost(PAYMENT_URL, "/payments", Mono.just(paymentResponse), PaymentResponse.class);
 
-    given(createOrderRepository.create(any(OrderEntity.class)))
+    given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));
 
     testClient
@@ -209,7 +210,9 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
         .jsonPath(REQUESTID_ATTRIBUTE)
         .isEqualTo(REQUEST_TRACE_ID);
 
-    then(createOrderRepository).should(times(1)).create(orderEntityCaptor.capture());
+    then(createOrderRepository)
+        .should(times(1))
+        .create(eq(CUSTOMER_ADDRESS_COUNTRY), orderEntityCaptor.capture());
     var capturedOrder = orderEntityCaptor.getValue();
 
     assertThat(capturedOrder.getCustomer()).isEqualTo(order.getCustomer());

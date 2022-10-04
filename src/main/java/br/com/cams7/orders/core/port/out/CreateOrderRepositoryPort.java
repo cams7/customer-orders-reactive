@@ -5,5 +5,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface CreateOrderRepositoryPort {
-  Mono<OrderEntity> create(OrderEntity order);
+  Mono<OrderEntity> create(String country, OrderEntity order);
 }

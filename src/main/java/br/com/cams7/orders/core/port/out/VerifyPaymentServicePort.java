@@ -5,5 +5,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface VerifyPaymentServicePort {
-  Mono<Payment> verify(String customerId, Float amount);
+  Mono<Payment> verify(String country, String requestTraceId, String customerId, Float amount);
 }

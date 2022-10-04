@@ -5,5 +5,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface GetCustomerCardServicePort {
-  Mono<CustomerCard> getCustomerCard(String cardUrl);
+  Mono<CustomerCard> getCustomerCard(String country, String requestTraceId, String cardUrl);
 }

@@ -27,33 +27,34 @@ public class CustomerService extends BaseWebclient
   private final ModelMapper modelMapper;
 
   @Override
-  public Mono<Customer> getCustomer(String customerUrl) {
+  public Mono<Customer> getCustomer(String country, String requestTraceId, String customerUrl) {
     return getWebClient(builder, customerUrl)
         .get()
-        .header(COUNTRY_HEADER, getCountry())
-        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
+        .header(COUNTRY_HEADER, country)
+        .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
         .bodyToMono(CustomerResponse.class)
         .map(this::getCustomer);
   }
 
   @Override
-  public Mono<CustomerAddress> getCustomerAddress(String addressUrl) {
+  public Mono<CustomerAddress> getCustomerAddress(
+      String country, String requestTraceId, String addressUrl) {
     return getWebClient(builder, addressUrl)
         .get()
-        .header(COUNTRY_HEADER, getCountry())
-        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
+        .header(COUNTRY_HEADER, country)
+        .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
         .bodyToMono(CustomerAddressResponse.class)
         .map(this::getCustomerAddress);
   }
 
   @Override
-  public Mono<CustomerCard> getCustomerCard(String cardUrl) {
+  public Mono<CustomerCard> getCustomerCard(String country, String requestTraceId, String cardUrl) {
     return getWebClient(builder, cardUrl)
         .get()
-        .header(COUNTRY_HEADER, getCountry())
-        .header(REQUEST_TRACE_ID_HEADER, getRequestTraceId())
+        .header(COUNTRY_HEADER, country)
+        .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
         .bodyToMono(CustomerCardResponse.class)
         .map(this::getCustomerCard);

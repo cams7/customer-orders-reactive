@@ -4,8 +4,8 @@ spring:
       version: 3.5.5
       
 api:
-  paymentUrl: http://test/payments
-  shippingUrl: http://test/shippings
+  paymentUrl: http://payments
+  shippingUrl: http://shippings
   
 logging:
   level:
@@ -13,3 +13,16 @@ logging:
   
 zone:
   ids: DO:"America/Dominica", BR:"America/Sao_Paulo", AR:"America/Buenos_Aires", EN:"America/New_York", CO:"America/Bogota", EC:"America/Guayaquil", PE:"America/Lima", ZA:"Africa/Johannesburg", MX:"America/Mexico_City"
+
+connectionProvider:
+  maxConnections: 10
+  maxIdleTimeInSeconds: 1
+  maxLifeTimeInSeconds: 1
+  
+httpClient:
+  connectTimeoutInMillis: 100
+  responseTimeoutInSeconds: 1
+  readTimeoutInSeconds: 1
+
+builder:
+  addClientConnector : false
