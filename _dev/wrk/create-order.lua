@@ -1,22 +1,22 @@
 country = "AR"
 
-customerUrl = "http://localhost:3000"
+customerUrl = "http://localhost:8084"
 cartUrl = "http://localhost:3001"
 
 customerIds = {
-    "068fb99e-290a-4b0c-ba55-fb8f0239eed8",
-    "20d54ed5-c94d-48f7-a912-bd85df84a6b9",
-    "ea5a387f-3535-4153-bd36-2e944ccdd459"
+    "57a98d98e4b00679b4a830b2",
+    "57a98d98e4b00679b4a830b1",
+    "5a934e000102030405000010"
 }
 addressIds = {
-    "1903e7e5-5cca-4cef-9d58-7bc42a2453d7",
-    "b7cb37d3-0094-483c-88de-b6b6b63c1bc2",
-    "4ed6fbca-9c27-4bd8-a998-ef190e88a8c8"
+    "57a98d98e4b00679b4a830b0",
+    "57a98ddce4b00679b4a830d1",
+    "5a934e000102030405000011"
 }
 cardIds = {
-    "42bacbfb-452d-45cd-932e-83a7a2b449ab",
-    "aea3692c-e415-4643-b2a2-08e776cd58ea",
-    "b4086cf9-f8c7-4d32-a48d-f898424301c8"
+    "57a98d98e4b00679b4a830b1",
+    "57a98ddce4b00679b4a830d2",
+    "5a934e000102030405000012"
 }
 cartIds = {
     "f716e351-5df1-4c9c-8324-bd12866e2900",

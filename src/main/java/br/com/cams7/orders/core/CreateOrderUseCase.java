@@ -25,9 +25,9 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class CreateOrderUseCase implements CreateOrderUseCasePort {
 
-  private static final float SHIPPING = 10.5f;
   private static final String ID_REGEX = "^[\\w\\-]+$";
 
+  private final Float shippingAmount;
   private final GetCustomerServicePort getCustomerService;
   private final GetCustomerAddressServicePort getCustomerAddressService;
   private final GetCustomerCardServicePort getCustomerCardService;
@@ -46,11 +46,15 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
                 country, requestTraceId, command.getAddressUrl()),
             getCustomerCardService.getCustomerCard(country, requestTraceId, command.getCardUrl()))
         .map(
-            t ->
-                new OrderEntity()
-                    .withCustomer(t.getT1())
-                    .withAddress(t.getT2())
-                    .withCard(t.getT3()))
+            t -> {
+              var customer = t.getT1();
+              customer.setFullName(
+                  String.format("%s %s", customer.getFirstName(), customer.getLastName()));
+              return new OrderEntity()
+                  .withCustomer(customer)
+                  .withAddress(t.getT2())
+                  .withCard(t.getT3());
+            })
         .zipWith(
             getCartItemsService
                 .getCartItems(country, requestTraceId, command.getItemsUrl())
@@ -115,12 +119,12 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
             });
   }
 
-  private static float getTotalAmount(OrderEntity order) {
+  private float getTotalAmount(OrderEntity order) {
     return (float)
         (order.getItems().stream()
                 .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
                 .sum()
-            + SHIPPING);
+            + shippingAmount);
   }
 
   @AllArgsConstructor

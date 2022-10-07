@@ -49,6 +49,8 @@ import br.com.cams7.orders.core.port.out.UpdateShippingByIdRepositoryPort;
 import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import br.com.cams7.orders.core.port.out.exception.ResponseStatusException;
 import java.util.List;
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,6 +77,11 @@ public class CreateOrderUseCaseTests extends BaseTests {
   @Mock private UpdateShippingByIdRepositoryPort updateShippingByIdRepository;
 
   @Captor private ArgumentCaptor<OrderEntity> orderEntityCaptor;
+
+  @BeforeEach
+  public void before() throws IllegalAccessException {
+    FieldUtils.writeField(createOrderUseCase, "shippingAmount", 10.5f, true);
+  }
 
   @Test
   @DisplayName("Should create order when pass valid URLs")

@@ -26,3 +26,5 @@ httpClient:
 
 builder:
   addClientConnector : false
+  
+shippingAmount: 10.5

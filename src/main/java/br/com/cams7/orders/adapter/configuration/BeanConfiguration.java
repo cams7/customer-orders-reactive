@@ -22,11 +22,15 @@ import br.com.cams7.orders.core.port.out.VerifyPaymentServicePort;
 import br.com.cams7.orders.core.utils.DateUtils;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BeanConfiguration {
+
+  @Value("${shippingAmount}")
+  private Float shippingAmount;
 
   @Autowired private ZonePropertiesWithValues zoneProperties;
 
@@ -68,6 +72,7 @@ public class BeanConfiguration {
       CreateOrderRepositoryPort createOrderRepository,
       UpdateShippingByIdRepositoryPort updateShippingByIdRepository) {
     return new CreateOrderUseCase(
+        shippingAmount,
         getCustomerService,
         getCustomerAddressService,
         getCustomerCardService,

@@ -32,3 +32,5 @@ httpClient:
 
 builder:
   addClientConnector : ${BUILDER_ADD_CLIENT_CONNECTOR:false}
+  
+shippingAmount: ${SHIPPING_AMOUNT:10.5}
