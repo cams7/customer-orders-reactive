@@ -1,0 +1,169 @@
+{
+  "customers": [
+    {
+      "id": "57a98d98e4b00679b4a830af",
+      "firstName": "Gustavo",
+      "lastName": "Ramos",
+      "username": "gustavo"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b2",
+      "firstName": "Juan",
+      "lastName": "Tercero",
+      "username": "juan"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b5",
+      "firstName": "Raimundo",
+      "lastName": "Araújo",
+      "username": "raimundo"
+    },
+    {
+      "id": "5a934e000102030405000003",
+      "firstName": "Santino",
+      "lastName": "Colunga",
+      "username": "santino"
+    },
+    {
+      "id": "5a934e000102030405000004",
+      "firstName": "Martin",
+      "lastName": "Rocha",
+      "username": "martin"
+    },
+    {
+      "id": "5a934e000102030405000007",
+      "firstName": "Luzia",
+      "lastName": "Mendes",
+      "username": "luzia"
+    },
+    {
+      "id": "5a934e000102030405000010",
+      "firstName": "Sebastián",
+      "lastName": "Longoria",
+      "username": "sebastian"
+    }
+  ],
+  "addresses": [
+    {
+      "id": "57a98d98e4b00679b4a830ad",
+      "number": "956",
+      "street": "Rua Manoel Gregório Mattos",
+      "postcode": "89816-170",
+      "city": "Chapecó",
+      "federativeUnit": "SC",
+      "country": "BR",
+      "customerId": "57a98d98e4b00679b4a830af"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b0",
+      "number": "2565",
+      "street": "Av Albarellos",
+      "postcode": "C1419DVM",
+      "city": "Buenos Aires",
+      "federativeUnit": "Ciudad Autónoma de Buenos Aires",
+      "country": "AR",
+      "customerId": "57a98d98e4b00679b4a830b2"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b3",
+      "number": "773",
+      "street": "Passagem Santa Maria",
+      "postcode": "66625-143",
+      "city": "Belém",
+      "federativeUnit": "PA",
+      "country": "BR",
+      "customerId": "57a98d98e4b00679b4a830b5"
+    },
+    {
+      "id": "57a98ddce4b00679b4a830d1",
+      "number": "1025",
+      "street": "San Fernando del Valle de Catamarca",
+      "postcode": "4700",
+      "city": "Municipio de San Fernando del Valle de Catamarca",
+      "federativeUnit": "Catamarca",
+      "country": "AR",
+      "customerId": "5a934e000102030405000003"
+    },
+    {
+      "id": "5a934e000102030405000005",
+      "number": "404",
+      "street": "Rua Orlando Ferreira",
+      "postcode": "88371530",
+      "city": "Navegantes",
+      "federativeUnit": "SC",
+      "country": "BR",
+      "customerId": "5a934e000102030405000004"
+    },
+    {
+      "id": "5a934e000102030405000008",
+      "number": "124",
+      "street": "Rua de 15 Novembro 568",
+      "postcode": "69450970",
+      "city": "Codajás",
+      "federativeUnit": "AM",
+      "country": "BR",
+      "customerId": "5a934e000102030405000007"
+    },
+    {
+      "id": "5a934e000102030405000011",
+      "number": "455",
+      "street": "Av Italia",
+      "postcode": "H3500ALD",
+      "city": "Resistencia",
+      "federativeUnit": "Chaco",
+      "country": "AR",
+      "customerId": "5a934e000102030405000010"
+    }
+  ],
+  "cards": [
+    {
+      "id": "57a98d98e4b00679b4a830ae",
+      "longNum": "5413096279109654",
+      "expires": "04/2023",
+      "ccv": "320",
+      "customerId": "57a98d98e4b00679b4a830af"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b1",
+      "longNum": "4539820506340218",
+      "expires": "02/2027",
+      "ccv": "668",
+      "customerId": "57a98d98e4b00679b4a830b2"
+    },
+    {
+      "id": "57a98d98e4b00679b4a830b4",
+      "longNum": "4929348351581213",
+      "expires": "06/2024",
+      "ccv": "441",
+      "customerId": "57a98d98e4b00679b4a830b5"
+    },
+    {
+      "id": "57a98ddce4b00679b4a830d2",
+      "longNum": "374301540174281",
+      "expires": "11/2028",
+      "ccv": "275",
+      "customerId": "5a934e000102030405000003"
+    },
+    {
+      "id": "5a934e000102030405000006",
+      "longNum": "5347243146720427",
+      "expires": "03/2023",
+      "ccv": "292",
+      "customerId": "5a934e000102030405000004"
+    },
+    {
+      "id": "5a934e000102030405000009",
+      "longNum": "5598962318326244",
+      "expires": "12/2023",
+      "ccv": "967",
+      "customerId": "5a934e000102030405000007"
+    },
+    {
+      "id": "5a934e000102030405000012",
+      "longNum": "6011789971225778",
+      "expires": "08/2027",
+      "ccv": "988",
+      "customerId": "5a934e000102030405000010"
+    }
+  ]
+}

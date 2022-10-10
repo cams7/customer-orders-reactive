@@ -1,11 +1,11 @@
 country = "AR"
 
 customerUrl = "http://localhost:8084"
-cartUrl = "http://localhost:3001"
+cartUrl = "http://localhost:8085"
 
 customerIds = {
     "57a98d98e4b00679b4a830b2",
-    "57a98d98e4b00679b4a830b1",
+    "5a934e000102030405000003",
     "5a934e000102030405000010"
 }
 addressIds = {
@@ -19,9 +19,9 @@ cardIds = {
     "5a934e000102030405000012"
 }
 cartIds = {
-    "f716e351-5df1-4c9c-8324-bd12866e2900",
-    "691c5af7-c651-4f36-b19e-184d37acc481",
-    "2ca11a65-2c4b-4671-b98a-724d31f457aa"
+    "5a934e000102030405000028",
+    "5a934e000102030405000034",
+    "5a934e000102030405000048"
 }
 
 math.randomseed(os.clock()*100000000000)
