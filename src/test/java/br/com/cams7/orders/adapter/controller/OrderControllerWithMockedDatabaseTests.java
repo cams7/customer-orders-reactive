@@ -47,10 +47,14 @@ import reactor.core.publisher.Mono;
 
 // @Disabled("Disabled until bug has been fixed!")
 @SpringBootTest(webEnvironment = RANDOM_PORT)
-@AutoConfigureWebTestClient(timeout = "300000")
+@AutoConfigureWebTestClient(/*timeout = "300000"*/ )
 public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests {
 
   private static final String PAYMENT_URL = "http://payments";
+  private static final String CUSTOMER_URL = "http://customers";
+  private static final String ADDRESS_URL = "http://addresses";
+  private static final String CARD_URL = "http://cards";
+  private static final String CART_URL = "http://carts";
 
   private static final String PATH = "/orders";
 
@@ -179,12 +183,11 @@ public class OrderControllerWithMockedDatabaseTests extends BaseIntegrationTests
     PaymentResponse paymentResponse =
         from(PaymentResponse.class).gimme(AUTHORISED_PAYMENT_RESPONSE);
 
-    mockGet(request.getCustomerUrl(), Mono.just(customerResponse), CustomerResponse.class);
-    mockGet(
-        request.getAddressUrl(), Mono.just(customerAddressResponse), CustomerAddressResponse.class);
-    mockGet(request.getCardUrl(), Mono.just(customerCardResponse), CustomerCardResponse.class);
-    mockGet(request.getItemsUrl(), Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
-    mockPost(PAYMENT_URL, "/payments", Mono.just(paymentResponse), PaymentResponse.class);
+    mockGet(CUSTOMER_URL, Mono.just(customerResponse), CustomerResponse.class);
+    mockGet(ADDRESS_URL, Flux.just(customerAddressResponse), CustomerAddressResponse.class);
+    mockGet(CARD_URL, Flux.just(customerCardResponse), CustomerCardResponse.class);
+    mockGet(CART_URL, Flux.fromIterable(cartItemsResponse), CartItemResponse.class);
+    mockPost(PAYMENT_URL, Mono.just(paymentResponse), PaymentResponse.class);
 
     given(createOrderRepository.create(anyString(), any(OrderEntity.class)))
         .willReturn(Mono.error(new RuntimeException(ERROR_MESSAGE)));

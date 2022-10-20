@@ -61,7 +61,10 @@ public class OrderRepository
   public Mono<OrderEntity> create(String country, OrderEntity order) {
     return mongoOperations
         .insert(getOrder(order), getCollectionName(country))
-        .map(registeredOrder -> getOrder(country, registeredOrder));
+        .map(
+            createdOrder -> {
+              return getOrder(country, createdOrder);
+            });
   }
 
   @Override

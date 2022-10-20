@@ -230,9 +230,9 @@ public class OrderController {
 
   private CreateOrderCommand getCreateOrder(CreateOrderRequest request) {
     return new CreateOrderCommand(
-        request.getCustomerUrl(),
-        request.getAddressUrl(),
-        request.getCardUrl(),
-        request.getItemsUrl());
+        request.getCustomerId(),
+        request.getAddressPostcode(),
+        request.getCardNumber(),
+        request.getCartId());
   }
 }

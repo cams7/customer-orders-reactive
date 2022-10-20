@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = PRIVATE)
 public final class CustomerTemplate {
 
-  public static final String CUSTOMER_ID = "703c327b-8b61-4f32-bf1a-fb3108a6f7e1";
+  public static final String CUSTOMER_ID = "57a98d98e4b00679b4a830af";
   public static final String CUSTOMER_FIRSTNAME = "Gustavo";
   public static final String CUSTOMER_LASTNAME = "Ramos";
   public static final String CUSTOMER_FULLNAME =

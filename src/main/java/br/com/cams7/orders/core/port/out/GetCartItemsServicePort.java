@@ -5,5 +5,6 @@ import reactor.core.publisher.Flux;
 
 @FunctionalInterface
 public interface GetCartItemsServicePort {
-  Flux<CartItem> getCartItems(String country, String requestTraceId, String itemsUrl);
+  Flux<CartItem> getCartItems(
+      String country, String requestTraceId, String customerId, String cartId);
 }

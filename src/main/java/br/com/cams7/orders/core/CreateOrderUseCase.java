@@ -4,6 +4,8 @@ import static br.com.cams7.orders.core.port.out.exception.ResponseStatusExceptio
 import static br.com.cams7.orders.core.port.out.exception.ResponseStatusException.INTERNAL_SERVER_ERROR_CODE;
 import static java.util.regex.Pattern.matches;
 
+import br.com.cams7.orders.core.domain.CartItem;
+import br.com.cams7.orders.core.domain.Customer;
 import br.com.cams7.orders.core.domain.OrderEntity;
 import br.com.cams7.orders.core.port.in.CreateOrderUseCasePort;
 import br.com.cams7.orders.core.port.in.params.CreateOrderCommand;
@@ -40,26 +42,19 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
   @Override
   public Mono<OrderEntity> execute(
       String country, String requestTraceId, CreateOrderCommand command) {
-    return Mono.zip(
-            getCustomerService.getCustomer(country, requestTraceId, command.getCustomerUrl()),
-            getCustomerAddressService.getCustomerAddress(
-                country, requestTraceId, command.getAddressUrl()),
-            getCustomerCardService.getCustomerCard(country, requestTraceId, command.getCardUrl()))
-        .map(
-            t -> {
-              var customer = t.getT1();
-              customer.setFullName(
-                  String.format("%s %s", customer.getFirstName(), customer.getLastName()));
-              return new OrderEntity()
-                  .withCustomer(customer)
-                  .withAddress(t.getT2())
-                  .withCard(t.getT3());
-            })
-        .zipWith(
-            getCartItemsService
-                .getCartItems(country, requestTraceId, command.getItemsUrl())
-                .collectList())
-        .flatMap(t -> verifyCartItems(t.getT1().withItems(t.getT2())))
+
+    return getCustomerService
+        .getCustomer(country, requestTraceId, command.getCustomerId())
+        .map(CreateOrderUseCase::getOrderWithCustomer)
+        .flatMap(
+            order ->
+                getOrderWithAddressAndCardAndSortedItems(
+                    order,
+                    country,
+                    requestTraceId,
+                    command.getAddressPostcode(),
+                    command.getCardNumber(),
+                    command.getCartId()))
         .flatMap(order -> verifyPayment(country, requestTraceId, order))
         .flatMap(order -> createOrder(country, order))
         .flatMap(order -> addShippingOrder(country, requestTraceId, order))
@@ -68,54 +63,80 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
                 updateShipping(country, shippingAndOrder.shippingId, shippingAndOrder.order));
   }
 
-  private static Mono<OrderEntity> verifyCartItems(OrderEntity order) {
-    if (CollectionUtils.isEmpty(order.getItems())) {
-      return Mono.error(
-          new ResponseStatusException("There aren't items in the cart", BAD_REQUEST_CODE));
-    }
-    return Mono.just(order);
+  private static OrderEntity getOrderWithCustomer(final Customer customer) {
+    customer.setFullName(String.format("%s %s", customer.getFirstName(), customer.getLastName()));
+    return new OrderEntity().withCustomer(customer);
+  }
+
+  private Mono<OrderEntity> getOrderWithAddressAndCardAndSortedItems(
+      final OrderEntity order,
+      final String country,
+      final String requestTraceId,
+      final String addressPostcode,
+      final String cardNumber,
+      final String cartId) {
+    final var customerId = order.getCustomer().getCustomerId();
+    return Mono.zip(
+            getCustomerAddressService.getCustomerAddress(
+                country, requestTraceId, customerId, addressPostcode),
+            getCustomerCardService.getCustomerCard(country, requestTraceId, customerId, cardNumber),
+            getCartItemsService
+                .getCartItems(country, requestTraceId, customerId, cartId)
+                .parallel()
+                .ordered(CreateOrderUseCase::compare)
+                .collectList())
+        .map(
+            t -> {
+              final var items = t.getT3();
+              if (CollectionUtils.isEmpty(items))
+                throw new ResponseStatusException(
+                    "There aren't items in the cart", BAD_REQUEST_CODE);
+              return order.withAddress(t.getT1()).withCard(t.getT2()).withItems(items);
+            });
   }
 
   private Mono<OrderEntity> verifyPayment(
-      String country, String requestTraceId, OrderEntity order) {
-    var customerId = order.getCustomer().getCustomerId();
-    var totalAmount = getTotalAmount(order);
+      final String country, final String requestTraceId, final OrderEntity order) {
+    final var customerId = order.getCustomer().getCustomerId();
+    final var totalAmount = getTotalAmount(order);
     return verifyPaymentService
         .verify(country, requestTraceId, customerId, totalAmount)
-        .flatMap(payment -> Mono.just(order.withTotalAmount(totalAmount).withPayment(payment)));
+        .map(
+            payment -> {
+              if (!payment.isAuthorised())
+                throw new ResponseStatusException(payment.getMessage(), BAD_REQUEST_CODE);
+              return order.withTotalAmount(totalAmount).withPayment(payment);
+            });
   }
 
-  private Mono<OrderEntity> createOrder(String country, OrderEntity order) {
-    var payment = order.getPayment();
-    if (!payment.isAuthorised()) {
-      return Mono.error(new ResponseStatusException(payment.getMessage(), BAD_REQUEST_CODE));
-    }
+  private Mono<OrderEntity> createOrder(final String country, final OrderEntity order) {
     order.setRegistrationDate(ZonedDateTime.now());
     return createOrderRepository.create(country, order);
   }
 
   private Mono<ShippingAndOrder> addShippingOrder(
-      String country, String requestTraceId, OrderEntity order) {
+      final String country, final String requestTraceId, final OrderEntity order) {
+    final var orderId = order.getOrderId();
     return addShippingOrderService
-        .add(country, requestTraceId, order.getOrderId())
+        .add(country, requestTraceId, orderId)
         .map(shippingId -> new ShippingAndOrder(shippingId, order));
   }
 
-  private Mono<OrderEntity> updateShipping(String country, String shippingId, OrderEntity order) {
-    var orderId = order.getOrderId();
-    var isRegisteredShipping = shippingId != null && matches(ID_REGEX, shippingId);
+  private Mono<OrderEntity> updateShipping(
+      final String country, final String shippingId, final OrderEntity order) {
+    final var orderId = order.getOrderId();
+    final var isRegisteredShipping = shippingId != null && matches(ID_REGEX, shippingId);
     return updateShippingByIdRepository
         .updateShipping(country, orderId, isRegisteredShipping)
-        .flatMap(
+        .map(
             modifiedCount -> {
-              if (modifiedCount != null && modifiedCount > 0) {
-                return Mono.just(order.withRegisteredShipping(isRegisteredShipping));
-              }
-              return Mono.error(
-                  new ResponseStatusException(
-                      String.format(
-                          "The registeredShipping field of order %s hasn't been changed", orderId),
-                      INTERNAL_SERVER_ERROR_CODE));
+              if (modifiedCount == null || modifiedCount <= 0)
+                throw new ResponseStatusException(
+                    String.format(
+                        "The registeredShipping field of order %s hasn't been changed", orderId),
+                    INTERNAL_SERVER_ERROR_CODE);
+
+              return order.withRegisteredShipping(isRegisteredShipping);
             });
   }
 
@@ -125,6 +146,17 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
                 .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
                 .sum()
             + shippingAmount);
+  }
+
+  private static int compare(CartItem item1, CartItem item2) {
+    return compare(
+        item2.getQuantity() * item2.getUnitPrice(), item1.getQuantity() * item1.getUnitPrice());
+  }
+
+  private static int compare(float value1, float value2) {
+    if (value1 > value2) return 1;
+    if (value1 < value2) return -1;
+    return 0;
   }
 
   @AllArgsConstructor

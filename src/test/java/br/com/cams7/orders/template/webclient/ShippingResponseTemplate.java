@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = PRIVATE)
 public final class ShippingResponseTemplate {
 
-  public static final String SHIPPING_ID = "6315da6f-5ab3-4262-968c-489ee541693f";
+  public static final String SHIPPING_ID = "5a934e000102030405000100";
 
   public static void loadTemplates() {
     of(ShippingResponse.class)

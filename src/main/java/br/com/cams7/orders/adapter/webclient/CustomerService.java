@@ -14,6 +14,7 @@ import br.com.cams7.orders.core.port.out.GetCustomerCardServicePort;
 import br.com.cams7.orders.core.port.out.GetCustomerServicePort;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -26,10 +27,20 @@ public class CustomerService extends BaseWebclient
   private final WebClient.Builder builder;
   private final ModelMapper modelMapper;
 
+  @Value("${api.customerUrl}")
+  private String customerUrl;
+
+  @Value("${api.addressUrl}")
+  private String addressUrl;
+
+  @Value("${api.cardUrl}")
+  private String cardUrl;
+
   @Override
-  public Mono<Customer> getCustomer(String country, String requestTraceId, String customerUrl) {
+  public Mono<Customer> getCustomer(String country, String requestTraceId, String customerId) {
     return getWebClient(builder, customerUrl)
         .get()
+        .uri(uriBuilder -> uriBuilder.path("/customers/{id}").build(customerId))
         .header(COUNTRY_HEADER, country)
         .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
@@ -39,24 +50,41 @@ public class CustomerService extends BaseWebclient
 
   @Override
   public Mono<CustomerAddress> getCustomerAddress(
-      String country, String requestTraceId, String addressUrl) {
+      String country, String requestTraceId, String customerId, String postcode) {
     return getWebClient(builder, addressUrl)
         .get()
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path("/addresses")
+                    .queryParam("customerId", customerId)
+                    .queryParam("postcode", postcode)
+                    .build())
         .header(COUNTRY_HEADER, country)
         .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
-        .bodyToMono(CustomerAddressResponse.class)
+        .bodyToFlux(CustomerAddressResponse.class)
+        .next()
         .map(this::getCustomerAddress);
   }
 
   @Override
-  public Mono<CustomerCard> getCustomerCard(String country, String requestTraceId, String cardUrl) {
+  public Mono<CustomerCard> getCustomerCard(
+      String country, String requestTraceId, String customerId, String longNum) {
     return getWebClient(builder, cardUrl)
         .get()
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path("/cards")
+                    .queryParam("customerId", customerId)
+                    .queryParam("longNum", longNum)
+                    .build())
         .header(COUNTRY_HEADER, country)
         .header(REQUEST_TRACE_ID_HEADER, requestTraceId)
         .retrieve()
-        .bodyToMono(CustomerCardResponse.class)
+        .bodyToFlux(CustomerCardResponse.class)
+        .next()
         .map(this::getCustomerCard);
   }
 

@@ -1,22 +1,21 @@
-country = "AR"
+-- wrk -c 500 -t 10 -d 30s -s ./create-order.lua --latency http://localhost:8080/orders
 
-customerUrl = "http://localhost:8084"
-cartUrl = "http://localhost:8085"
+country = "AR"
 
 customerIds = {
     "57a98d98e4b00679b4a830b2",
     "5a934e000102030405000003",
     "5a934e000102030405000010"
 }
-addressIds = {
-    "57a98d98e4b00679b4a830b0",
-    "57a98ddce4b00679b4a830d1",
-    "5a934e000102030405000011"
+addressPostcodes = {
+    "C1419DVM",
+    "4700",
+    "H3500ALD"
 }
-cardIds = {
-    "57a98d98e4b00679b4a830b1",
-    "57a98ddce4b00679b4a830d2",
-    "5a934e000102030405000012"
+cardNumbers = {
+    "4539820506340218",
+    "374301540174281",
+    "6011789971225778"
 }
 cartIds = {
     "5a934e000102030405000028",
@@ -24,36 +23,34 @@ cartIds = {
     "5a934e000102030405000048"
 }
 
-math.randomseed(os.clock()*100000000000)
-
-getCustomerUrl = function(customerId)
-    return customerUrl.."/customers/"..customerId
-end
-
-getAddressUrl = function(addressId)
-    return customerUrl.."/addresses/"..addressId
-end
-
-getCardUrl = function(cardId)
-    return customerUrl.."/cards/"..cardId
-end
-
-getItemsUrl = function(cartId)
-    return cartUrl.."/carts/"..cartId.."/items"
-end
-
-getBody = function()
-    index = math.random(1, 3)
-    return "{\"customerUrl\": \""..getCustomerUrl(customerIds[index]).."\",\"addressUrl\": \""..getAddressUrl(addressIds[index]).."\",\"cardUrl\": \""..getCardUrl(cardIds[index]).."\",\"itemsUrl\": \""..getItemsUrl(cartIds[index]).."\"}"
+getBody = function(index)
+    return "{\"customerId\": \""..customerIds[index].."\",\"addressPostcode\": \""..addressPostcodes[index].."\",\"cardNumber\": \""..cardNumbers[index].."\",\"cartId\": \""..cartIds[index].."\"}"
 end
 
 getRequestTraceId = function()
-    return string.lower(country).."-"..math.random(10000, 65000)
+    return string.lower(country).."-"..(os.clock()*100000000000)
 end
 
-wrk.method = "POST"
-wrk.body = getBody()
-wrk.headers["Content-Type"] = "application/json"
-wrk.headers["country"] = country
-wrk.headers["requestTraceId"] = getRequestTraceId()
+-- init random
+setup = function(thread)
+  math.randomseed(os.time())
+end
 
+request = function()
+ local path = "/orders"
+ local body = getBody(math.random(1, 3))
+ wrk.method = "POST"
+ wrk.headers["Content-Type"] = "application/json"
+ wrk.headers["country"] = country
+ wrk.headers["requestTraceId"] = getRequestTraceId()
+
+ return wrk.format("POST", path, wrk.headers, body)
+end
+
+done = function(summary, latency, requests)
+ io.write("------------------------------\n")
+ for _, p in pairs({50, 90, 99, 99.999}) do
+  n = latency:percentile(p)
+  io.write(string.format("%g%%,%d\n", p, n))
+ end
+end
