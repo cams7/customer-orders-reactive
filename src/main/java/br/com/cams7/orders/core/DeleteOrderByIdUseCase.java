@@ -11,7 +11,7 @@ public class DeleteOrderByIdUseCase implements DeleteOrderByIdUseCasePort {
   private final DeleteOrderByIdRepositoryPort deleteOrderByIdRepository;
 
   @Override
-  public Mono<Void> execute(String country, String orderId) {
+  public Mono<Void> execute(final String country, final String orderId) {
     return deleteOrderByIdRepository.delete(country, orderId).flatMap(deletedCount -> Mono.empty());
   }
 }

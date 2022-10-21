@@ -35,50 +35,48 @@ public class OrderRepository
   private final ModelMapper modelMapper;
 
   @Override
-  public Flux<OrderEntity> getOrders(String country) {
-    var query = new Query(Criteria.where("address.country").is(country));
+  public Flux<OrderEntity> getOrders(final String country) {
+    final var query = new Query(Criteria.where("address.country").is(country));
     return mongoOperations
         .find(query, OrderModel.class, getCollectionName(country))
         .map(order -> getOrder(country, order));
   }
 
   @Override
-  public Mono<OrderEntity> getOrder(String country, String orderId) {
+  public Mono<OrderEntity> getOrder(final String country, final String orderId) {
     return mongoOperations
         .findById(orderId, OrderModel.class, getCollectionName(country))
         .map(order -> getOrder(country, order));
   }
 
   @Override
-  public Mono<Long> delete(String country, String orderId) {
-    var query = new Query(Criteria.where("id").is(orderId));
+  public Mono<Long> delete(final String country, final String orderId) {
+    final var query = new Query(Criteria.where("id").is(orderId));
     return mongoOperations
         .remove(query, OrderModel.class, getCollectionName(country))
         .map(data -> data.getDeletedCount());
   }
 
   @Override
-  public Mono<OrderEntity> create(String country, OrderEntity order) {
+  public Mono<OrderEntity> create(final String country, final OrderEntity order) {
     return mongoOperations
         .insert(getOrder(order), getCollectionName(country))
-        .map(
-            createdOrder -> {
-              return getOrder(country, createdOrder);
-            });
+        .map(createdOrder -> getOrder(country, createdOrder));
   }
 
   @Override
-  public Mono<Long> updateShipping(String country, String orderId, Boolean registeredShipping) {
-    var query = new Query(Criteria.where("id").is(orderId));
-    var update = new Update();
+  public Mono<Long> updateShipping(
+      final String country, final String orderId, final Boolean registeredShipping) {
+    final var query = new Query(Criteria.where("id").is(orderId));
+    final var update = new Update();
     update.set("registeredShipping", registeredShipping);
     return mongoOperations
         .updateFirst(query, update, OrderModel.class, getCollectionName(country))
         .map(result -> result.getModifiedCount());
   }
 
-  private OrderEntity getOrder(String country, OrderModel model) {
-    var entity =
+  private OrderEntity getOrder(final String country, final OrderModel model) {
+    final var entity =
         modelMapper
             .map(model, OrderEntity.class)
             .withOrderId(model.getId())
@@ -87,15 +85,15 @@ public class OrderRepository
     return entity;
   }
 
-  private OrderModel getOrder(OrderEntity entity) {
-    var model = modelMapper.map(entity, OrderModel.class);
+  private OrderModel getOrder(final OrderEntity entity) {
+    final var model = modelMapper.map(entity, OrderModel.class);
     model.setId(entity.getOrderId());
     model.setTotal(entity.getTotalAmount());
     model.setRegistrationDate(entity.getRegistrationDate().toLocalDateTime());
     return model;
   }
 
-  private static String getCollectionName(String country) {
+  private static String getCollectionName(final String country) {
     return getCollectionByCountry(country, COLLECTION_NAME);
   }
 }

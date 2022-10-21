@@ -27,7 +27,10 @@ public class PaymentService extends BaseWebclient implements VerifyPaymentServic
 
   @Override
   public Mono<Payment> verify(
-      String country, String requestTraceId, String customerId, Float amount) {
+      final String country,
+      final String requestTraceId,
+      final String customerId,
+      final Float amount) {
     return getWebClient(builder, paymentUrl)
         .post()
         .uri("/payments")
@@ -41,7 +44,7 @@ public class PaymentService extends BaseWebclient implements VerifyPaymentServic
         .map(this::getPayment);
   }
 
-  private Payment getPayment(PaymentResponse response) {
+  private Payment getPayment(final PaymentResponse response) {
     return modelMapper.map(response, Payment.class);
   }
 }

@@ -25,7 +25,10 @@ public class CartService extends BaseWebclient implements GetCartItemsServicePor
 
   @Override
   public Flux<CartItem> getCartItems(
-      String country, String requestTraceId, String customerId, String cartId) {
+      final String country,
+      final String requestTraceId,
+      final String customerId,
+      final String cartId) {
     return getWebClient(builder, cartUrl)
         .get()
         .uri(
@@ -42,7 +45,7 @@ public class CartService extends BaseWebclient implements GetCartItemsServicePor
         .map(this::getCartItem);
   }
 
-  private CartItem getCartItem(CartItemResponse response) {
+  private CartItem getCartItem(final CartItemResponse response) {
     return modelMapper.map(response, CartItem.class);
   }
 }

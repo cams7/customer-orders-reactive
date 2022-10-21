@@ -23,7 +23,7 @@ public class ShippingService extends BaseWebclient implements AddShippingOrderSe
   private String shippingUrl;
 
   @Override
-  public Mono<String> add(String country, String requestTraceId, String orderId) {
+  public Mono<String> add(final String country, final String requestTraceId, final String orderId) {
     return getWebClient(builder, shippingUrl)
         .post()
         .uri("/shippings")

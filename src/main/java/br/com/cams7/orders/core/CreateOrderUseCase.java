@@ -41,7 +41,7 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
 
   @Override
   public Mono<OrderEntity> execute(
-      String country, String requestTraceId, CreateOrderCommand command) {
+      final String country, final String requestTraceId, final CreateOrderCommand command) {
 
     return getCustomerService
         .getCustomer(country, requestTraceId, command.getCustomerId())
@@ -140,7 +140,7 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
             });
   }
 
-  private float getTotalAmount(OrderEntity order) {
+  private float getTotalAmount(final OrderEntity order) {
     return (float)
         (order.getItems().stream()
                 .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
@@ -148,12 +148,12 @@ public class CreateOrderUseCase implements CreateOrderUseCasePort {
             + shippingAmount);
   }
 
-  private static int compare(CartItem item1, CartItem item2) {
+  private static int compare(final CartItem item1, final CartItem item2) {
     return compare(
         item2.getQuantity() * item2.getUnitPrice(), item1.getQuantity() * item1.getUnitPrice());
   }
 
-  private static int compare(float value1, float value2) {
+  private static int compare(final float value1, final float value2) {
     if (value1 > value2) return 1;
     if (value1 < value2) return -1;
     return 0;

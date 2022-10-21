@@ -22,7 +22,7 @@ public abstract class BaseTests {
   @BeforeAll
   static void setup() {
     loadTemplates(getPackageName(DomainTemplateLoader.class));
-    BlockHound.install();
+    BlockHound.install(builder -> builder.allowBlockingCallsInside("java.time.ZoneRegion", "ofId"));
   }
 
   @Test

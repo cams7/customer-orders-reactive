@@ -37,7 +37,8 @@ public class CustomerService extends BaseWebclient
   private String cardUrl;
 
   @Override
-  public Mono<Customer> getCustomer(String country, String requestTraceId, String customerId) {
+  public Mono<Customer> getCustomer(
+      final String country, final String requestTraceId, final String customerId) {
     return getWebClient(builder, customerUrl)
         .get()
         .uri(uriBuilder -> uriBuilder.path("/customers/{id}").build(customerId))
@@ -50,7 +51,10 @@ public class CustomerService extends BaseWebclient
 
   @Override
   public Mono<CustomerAddress> getCustomerAddress(
-      String country, String requestTraceId, String customerId, String postcode) {
+      final String country,
+      final String requestTraceId,
+      final String customerId,
+      final String postcode) {
     return getWebClient(builder, addressUrl)
         .get()
         .uri(
@@ -70,7 +74,10 @@ public class CustomerService extends BaseWebclient
 
   @Override
   public Mono<CustomerCard> getCustomerCard(
-      String country, String requestTraceId, String customerId, String longNum) {
+      final String country,
+      final String requestTraceId,
+      final String customerId,
+      final String longNum) {
     return getWebClient(builder, cardUrl)
         .get()
         .uri(
@@ -88,20 +95,20 @@ public class CustomerService extends BaseWebclient
         .map(this::getCustomerCard);
   }
 
-  private Customer getCustomer(CustomerResponse response) {
-    var customer = modelMapper.map(response, Customer.class);
+  private Customer getCustomer(final CustomerResponse response) {
+    final var customer = modelMapper.map(response, Customer.class);
     customer.setCustomerId(response.getId());
     return customer;
   }
 
-  private CustomerAddress getCustomerAddress(CustomerAddressResponse response) {
-    var customerAddress = modelMapper.map(response, CustomerAddress.class);
+  private CustomerAddress getCustomerAddress(final CustomerAddressResponse response) {
+    final var customerAddress = modelMapper.map(response, CustomerAddress.class);
     customerAddress.setAddressId(response.getId());
     return customerAddress;
   }
 
-  private CustomerCard getCustomerCard(CustomerCardResponse response) {
-    var customerCard = modelMapper.map(response, CustomerCard.class);
+  private CustomerCard getCustomerCard(final CustomerCardResponse response) {
+    final var customerCard = modelMapper.map(response, CustomerCard.class);
     customerCard.setCardId(response.getId());
     return customerCard;
   }

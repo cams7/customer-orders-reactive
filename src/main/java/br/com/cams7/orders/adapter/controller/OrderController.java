@@ -94,8 +94,8 @@ public class OrderController {
   @ResponseStatus(OK)
   @GetMapping
   Flux<OrderResponse> getOrders(
-      @RequestHeader(COUNTRY_HEADER) String country,
-      @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId) {
+      @RequestHeader(COUNTRY_HEADER) final String country,
+      @RequestHeader(REQUEST_TRACE_ID_HEADER) final String requestTraceId) {
     return getOrdersByCountryUseCase.execute(country).map(this::getOrder);
   }
 
@@ -128,15 +128,15 @@ public class OrderController {
   @ResponseStatus(OK)
   @GetMapping("/{orderId}")
   Mono<OrderResponse> getOrder(
-      @RequestHeader(COUNTRY_HEADER) String country,
-      @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId,
+      @RequestHeader(COUNTRY_HEADER) final String country,
+      @RequestHeader(REQUEST_TRACE_ID_HEADER) final String requestTraceId,
       @Parameter(
               name = "orderId",
               required = true,
               description = "Order id",
               example = "57a98d98e4b00679b4a830af")
           @PathVariable
-          String orderId) {
+          final String orderId) {
     return getOrderByIdUseCase.execute(country, orderId).map(this::getOrder);
   }
 
@@ -169,15 +169,15 @@ public class OrderController {
   @ResponseStatus(OK)
   @DeleteMapping("/{orderId}")
   Mono<Void> deleteOrder(
-      @RequestHeader(COUNTRY_HEADER) String country,
-      @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId,
+      @RequestHeader(COUNTRY_HEADER) final String country,
+      @RequestHeader(REQUEST_TRACE_ID_HEADER) final String requestTraceId,
       @Parameter(
               name = "orderId",
               required = true,
               description = "Order id",
               example = "57a98d98e4b00679b4a830af")
           @PathVariable
-          String orderId) {
+          final String orderId) {
     return deleteOrderByIdUseCase.execute(country, orderId);
   }
 
@@ -214,16 +214,16 @@ public class OrderController {
   @PostMapping(consumes = APPLICATION_JSON_VALUE)
   @ResponseStatus(CREATED)
   Mono<OrderResponse> createOrder(
-      @RequestHeader(COUNTRY_HEADER) String country,
-      @RequestHeader(REQUEST_TRACE_ID_HEADER) String requestTraceId,
-      @RequestBody CreateOrderRequest request) {
+      @RequestHeader(COUNTRY_HEADER) final String country,
+      @RequestHeader(REQUEST_TRACE_ID_HEADER) final String requestTraceId,
+      @RequestBody final CreateOrderRequest request) {
     return createOrderUseCase
         .execute(country, requestTraceId, getCreateOrder(request))
         .map(this::getOrder);
   }
 
-  private OrderResponse getOrder(OrderEntity entity) {
-    var response = modelMapper.map(entity, OrderResponse.class);
+  private OrderResponse getOrder(final OrderEntity entity) {
+    final var response = modelMapper.map(entity, OrderResponse.class);
     response.setRegistrationDate(getFormattedDateTime(entity.getRegistrationDate()));
     return response;
   }

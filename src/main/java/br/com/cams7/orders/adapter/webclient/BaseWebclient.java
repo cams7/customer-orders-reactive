@@ -34,19 +34,19 @@ public abstract class BaseWebclient {
   @Value("${builder.addClientConnector}")
   private Boolean addClientConnector;
 
-  protected WebClient getWebClient(Builder builder, String url) {
+  protected WebClient getWebClient(final Builder builder, final String url) {
     return getBuilder(builder, url).build();
   }
 
-  private Builder getBuilder(Builder builder, String url) {
-    var provider =
+  private Builder getBuilder(Builder builder, final String url) {
+    final var provider =
         ConnectionProvider.builder("customer-orders")
             .maxConnections(maxConnections)
             .maxIdleTime(Duration.ofSeconds(maxIdleTimeInSeconds))
             .maxLifeTime(Duration.ofSeconds(maxLifeTimeInSeconds))
             .build();
 
-    var httpClient =
+    final var httpClient =
         HttpClient.create(provider)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutInMillis)
             .wiretap(true)
@@ -56,7 +56,7 @@ public abstract class BaseWebclient {
                     connection.addHandlerFirst(
                         new ReadTimeoutHandler(readTimeoutInSeconds, TimeUnit.SECONDS)));
 
-    var connector = new ReactorClientHttpConnector(httpClient);
+    final var connector = new ReactorClientHttpConnector(httpClient);
 
     if (addClientConnector) builder = builder.clientConnector(connector);
 

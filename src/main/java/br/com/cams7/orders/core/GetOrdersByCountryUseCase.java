@@ -12,7 +12,7 @@ public class GetOrdersByCountryUseCase implements GetOrdersByCountryUseCasePort 
   private final GetOrdersByCountryRepositoryPort getOrdersRepository;
 
   @Override
-  public Flux<OrderEntity> execute(String country) {
+  public Flux<OrderEntity> execute(final String country) {
     return getOrdersRepository.getOrders(country);
   }
 }

@@ -12,7 +12,7 @@ public class GetOrderByIdUseCase implements GetOrderByIdUseCasePort {
   private final GetOrderByIdRepositoryPort getOrderByIdRepository;
 
   @Override
-  public Mono<OrderEntity> execute(String country, String orderId) {
+  public Mono<OrderEntity> execute(final String country, final String orderId) {
     return getOrderByIdRepository.getOrder(country, orderId);
   }
 }
